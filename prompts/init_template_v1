@@ -1,4 +1,4 @@
-Task: From the sampled observations (possibly noisy, partially observed) and any input schedules, produce a SINGLE JSON object that fully specifies an rxode2-solvable model spec for simulation and parameter initialization. Your output MUST satisfy the schema and constraints below. Do not include explanations.
+Task: From the sampled observations (possibly noisy, partially observed) and any input schedules, produce a SINGLE JSON object that fully specifies an rxode2-solvable model spec for simulation and parameter initialization. Your output will be used as the starting point for a numerical optimization. Your output MUST satisfy the schema and constraints below. Do not include explanations.
 
 DATA (read-only)
 -----------
@@ -18,7 +18,7 @@ SCHEMA (required keys and types)
     "ode_text": string                    // raw rxode2 block; see rules
   },
   "init": { state: number, ... },         // baseline initial values for ALL states
-  "param_values": { param: number, ... }, // initial guesses for ALL params
+  "param_values": { param: number, ... }, // initial guesses for ALL GLOBAL parameters (shared across all conditions).
   "inputs": [                             
     { "name": string,
       "type": "piecewise" | "constant",
@@ -26,7 +26,7 @@ SCHEMA (required keys and types)
       // or "value": number                 // only if type=="constant"
     }, ...
   ],
-  "observe": { obs_name: state_name, ... }, // at least one observable; map to states
+  "observe": { obs_name: state_name, ... }, // at least one observable (must match a variable in the DATA); map to states (must match a variable in your ODE model spec.)
   "noise": [
     { "target": obs_name, "type": "gaussian", "sigma": number } |
     { "target": obs_name, "type": "lognormal", "sigma": number } |
@@ -37,10 +37,17 @@ SCHEMA (required keys and types)
   "conditions": [
     { "name": string,
       "init": { state: number, ... },     // optional overrides (subset of states)
-      "params": { param: number, ... }    // optional overrides (subset of params)
+      "params": { param: number, ... }    // OPTIONAL: Override guesses for LOCAL (condition-specific) parameters.
     }, ...
   ]
 }
+
+PARAMETER SCOPE RULES
+-----------
+- The top-level `param_values` block defines GLOBAL parameters. These are assumed to have the same value for all conditions and will be optimized as single values.
+- If a parameter's value is expected to be DIFFERENT for a specific condition, define it inside that condition's `params` block.
+- Any parameter listed in a condition's `params` block will be treated as a LOCAL parameter, separate from the global value and from other conditions.
+- If a parameter is NOT overridden in a condition's `params` block, it automatically uses the GLOBAL value from the top-level `param_values`.
 
 ODE_TEXT RULES (rxode2)
 -----------
@@ -65,7 +72,7 @@ CONSTRAINTS (must all hold)
    - Every param in "params" is used somewhere in "ode_text".
    - "init" provides a numeric value for EVERY state (baseline).
    - "param_values" provides a numeric value for EVERY param.
-   - "observe" maps at least one observable to an existing state (by its exact name).
+   - "observe" maps at least one observable from the DATA to an existing model state (by its exact name).
 3) Inputs
    - If any input is referenced in "ode_text", include it in "inputs".
    - For "piecewise", each triple [t0, t1, value] has t0 < t1, numbers only.

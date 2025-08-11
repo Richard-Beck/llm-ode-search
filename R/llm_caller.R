@@ -10,6 +10,30 @@ read_packet_text <- function(path) {
   if (length(txt) > 1) paste0("[", paste(txt, collapse=","), "]") else txt
 }
 
+# A more robust function to extract the first complete JSON object from a string
+# A robust function to extract a JSON string from LLM output
+extract_json <- function(text) {
+  # This regex looks for a ```json ... ``` or ``` ... ``` block
+  # and captures only the content inside.
+  match <- regexpr("```(?:json)?\\s*(\\{[\\s\\S]*\\})\\s*```", text, perl = TRUE)
+  
+  if (attr(match, "capture.start") > 0) {
+    # If fences are found, extract the captured group (the part in parentheses)
+    start <- attr(match, "capture.start")[1]
+    end <- start + attr(match, "capture.length")[1] - 1
+    return(substr(text, start, end))
+  } else {
+    # If no fences are found, fall back to finding the first raw JSON object
+    match <- regexpr("\\{[\\s\\S]*\\}", text)
+    if (match > -1) {
+      return(regmatches(text, match))
+    }
+  }
+  
+  # If no JSON is found at all, return the original text for debugging
+  return(text)
+}
+
 # strip code fences if the model adds them
 strip_fences <- function(s){
   sub("^\\s*```(?:json)?\\s*|\\s*```\\s*$", "", s)
@@ -67,23 +91,25 @@ cerebras_call <- function(packet_path,
   
   # OpenAI-compatible extraction; some models may return a list of content parts
   content <- res$choices[[1]]$message$content
-  if (is.list(content)) {               # rare: parts; collapse to text
-    content <- paste(vapply(content, `[[`, "", "text"), collapse = "\n")
-  }
+  txt <- extract_json(content)
   
-  txt <- strip_fences(content)
-  
+  # The tryCatch block now works on the cleanly extracted text
   parsed_ok <- TRUE
-  parsed <- tryCatch(jsonlite::fromJSON(txt, simplifyVector=FALSE), error=function(e){parsed_ok<<-FALSE;NULL})
+  parsed <- tryCatch(jsonlite::fromJSON(txt, simplifyVector = FALSE), error = function(e) {
+    warning("JSON parsing failed with error: ", e$message)
+    parsed_ok <<- FALSE
+    NULL
+  })
   
   if (parsed_ok) {
-    writeLines(jsonlite::toJSON(parsed, auto_unbox=TRUE, null="null", pretty=TRUE), out_path)
+    writeLines(jsonlite::toJSON(parsed, auto_unbox = TRUE, null = "null", pretty = TRUE), out_path)
   } else {
     raw_path <- sub("\\.json$", ".txt", out_path)
-    writeLines(txt, raw_path)
-    warning("Model output was not valid JSON; saved raw text to: ", raw_path)
+    # Write the original, pre-extracted content for debugging
+    writeLines(content, raw_path)
+    warning("Model output did not contain valid JSON; saved raw text to: ", raw_path)
   }
   
-  invisible(list(ok=parsed_ok, text=txt, parsed=parsed, raw=res))
+  invisible(list(ok = parsed_ok, text = txt, parsed = parsed, raw = res))
 }
 
