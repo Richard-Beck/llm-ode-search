@@ -1,0 +1,20 @@
+{
+  "model":{
+    "name":"DroopQuota",
+    "states":["X","Q","S"],
+    "params":["mu_max","Q0","rho_max","Ks","m"],
+    "ode_text":"rho = rho_max*S/(Ks+S);\nmu = mu_max*(1 - Q0/Q);\nd/dt(X) = (mu - m)*X;\nd/dt(Q) = rho - mu*Q;\nd/dt(S) = -rho*X;"
+  },
+  "init":{"X":0.05,"Q":0.10,"S":5.0},
+  "param_values":{"mu_max":0.9,"Q0":0.03,"rho_max":2.0,"Ks":0.3,"m":0.05},
+  "inputs":[],
+  "observe":{"X":"X","Q":"Q","S":"S"},
+  "noise":[{"target":"X","type":"lognormal","sigma":0.07}],
+  "sampling":{"t0":0.0,"t1":48.0,"dt":0.5},
+  "replicates":3,
+  "conditions":[
+    {"name":"S_high","init":{"S":5.0},"params":{}},
+    {"name":"S_mid","init":{"S":2.0},"params":{}},
+    {"name":"S_low","init":{"S":0.8},"params":{}}
+  ]
+}

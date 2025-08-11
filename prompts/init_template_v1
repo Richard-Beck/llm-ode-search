@@ -1,0 +1,90 @@
+Task: From the sampled observations (possibly noisy, partially observed) and any input schedules, produce a SINGLE JSON object that fully specifies an rxode2-solvable model spec for simulation and parameter initialization. Your output MUST satisfy the schema and constraints below. Do not include explanations.
+
+DATA (read-only)
+-----------
+Packet (array of condition objects):
+{{packet_json}}
+
+Optional prior/model menu (free text hints; you may ignore if unhelpful):
+{{model_hints}}
+
+SCHEMA (required keys and types)
+-----------
+{
+  "model": {
+    "name": string,                       // short ID you choose
+    "states": [string, ...],              // unique; length >= 1
+    "params": [string, ...],              // unique; length >= 1
+    "ode_text": string                    // raw rxode2 block; see rules
+  },
+  "init": { state: number, ... },         // baseline initial values for ALL states
+  "param_values": { param: number, ... }, // initial guesses for ALL params
+  "inputs": [                             
+    { "name": string,
+      "type": "piecewise" | "constant",
+      "schedule": [[t0, t1, value], ...]  // only if type=="piecewise"
+      // or "value": number                 // only if type=="constant"
+    }, ...
+  ],
+  "observe": { obs_name: state_name, ... }, // at least one observable; map to states
+  "noise": [
+    { "target": obs_name, "type": "gaussian", "sigma": number } |
+    { "target": obs_name, "type": "lognormal", "sigma": number } |
+    { "target": obs_name, "type": "negbin", "k": number }
+  ],
+  "sampling": { "t0": number, "t1": number, "dt": number },
+  "replicates": integer >= 1,
+  "conditions": [
+    { "name": string,
+      "init": { state: number, ... },     // optional overrides (subset of states)
+      "params": { param: number, ... }    // optional overrides (subset of params)
+    }, ...
+  ]
+}
+
+ODE_TEXT RULES (rxode2)
+-----------
+- Provide raw equations only; DO NOT wrap in a function or braces.
+- Each state X must have exactly one derivative line:  d/dt(X) = <expr>;
+- You may define algebraic helpers on separate lines (e.g.,  alpha = a0 + a1*S;).
+- Symbols allowed: state names, parameter names, input names, numbers, + - * / ^ () exp log pow ifelse.
+- If you reference an input (e.g., L), it MUST appear in "inputs" with an identical name.
+- End each line with a semicolon.
+- Example style:
+  rho = rho_max*S/(Ks+S);
+  mu  = mu_max*(1 - Q0/Q);
+  d/dt(X) = (mu - m)*X;
+
+CONSTRAINTS (must all hold)
+-----------
+1) Names
+   - "states", "params", and input "name"s are unique and case-sensitive.
+   - Names cannot be "time" or "t".
+2) Coverage
+   - Every state in "states" appears on the LHS of exactly one d/dt(...) in "ode_text".
+   - Every param in "params" is used somewhere in "ode_text".
+   - "init" provides a numeric value for EVERY state (baseline).
+   - "param_values" provides a numeric value for EVERY param.
+   - "observe" maps at least one observable to an existing state (by its exact name).
+3) Inputs
+   - If any input is referenced in "ode_text", include it in "inputs".
+   - For "piecewise", each triple [t0, t1, value] has t0 < t1, numbers only.
+   - Input change times should align with features seen in the packet where possible.
+4) Sampling
+   - Use a reasonable grid covering the packet’s time range; "t0" <= min time, "t1" >= max time.
+5) Conditions
+   - Include one condition per packet condition (by the same name), unless the packet implies a single baseline condition.
+   - Per-condition "init"/"params" may override subsets; otherwise omit those keys.
+6) JSON hygiene
+   - ONE top-level JSON object only.
+   - No trailing commas; no comments; all numbers finite; strings quoted.
+
+DERIVATION HINTS (non-binding)
+-----------
+- Use variable_summaries, pairwise lags, and input schedules from the packet to choose a plausible structure and initial guesses.
+- Keep complexity low–moderate (1–4 states, 4–10 parameters). Favor identifiable forms.
+
+OUTPUT
+-----------
+Return ONLY the JSON object. No prose.
+

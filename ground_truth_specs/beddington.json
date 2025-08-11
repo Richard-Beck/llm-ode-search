@@ -1,0 +1,19 @@
+{
+  "model":{
+    "name":"BeddingtonDeAngelis",
+    "states":["N","P"],
+    "params":["r","K","a","h","c","e","m"],
+    "ode_text":"cons = (a*N*P)/(1 + a*h*N + c*P);\nd/dt(N) = r*N*(1 - N/K) - cons;\nd/dt(P) = e*cons - m*P;"
+  },
+  "init":{"N":6.0,"P":1.5},
+  "param_values":{"r":1.0,"K":10.0,"a":0.8,"h":0.4,"c":0.2,"e":0.6,"m":0.2},
+  "inputs":[],
+  "observe":{"N":"N","P":"P"},
+  "noise":[{"target":"N","type":"negbin","k":20},{"target":"P","type":"gaussian","sigma":0.10}],
+  "sampling":{"t0":0.0,"t1":40.0,"dt":0.2},
+  "replicates":3,
+  "conditions":[
+    {"name":"oscillatory","init":{},"params":{}},
+    {"name":"damped","init":{},"params":{"a":0.5}}
+  ]
+}

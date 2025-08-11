@@ -1,0 +1,83 @@
+{
+  "model": {
+    "name": "example_model",
+    "states": [
+      "Rstar"
+    ],
+    "params": [
+      "a",
+      "b",
+      "c"
+    ],
+    "ode_text": "d/dt(Rstar) = a*Rstar - b*L; L = L_input;"
+  },
+  "init": {
+    "Rstar": 0.1
+  },
+  "param_values": {
+    "a": 0.1,
+    "b": 0.2,
+    "c": 0.3
+  },
+  "inputs": [
+    {
+      "name": "L",
+      "type": "piecewise",
+      "schedule": [
+        [
+          0,
+          2,
+          0
+        ],
+        [
+          2,
+          6,
+          1
+        ],
+        [
+          6,
+          14,
+          0
+        ],
+        [
+          14,
+          18,
+          0.5
+        ],
+        [
+          18,
+          25,
+          0
+        ]
+      ]
+    }
+  ],
+  "observe": {
+    "R_obs": "Rstar"
+  },
+  "noise": [
+    {
+      "target": "R_obs",
+      "type": "gaussian",
+      "sigma": 0.1
+    }
+  ],
+  "sampling": {
+    "t0": 0,
+    "t1": 24,
+    "dt": 4
+  },
+  "replicates": 1,
+  "conditions": [
+    {
+      "name": "baseline",
+      "init": {}
+    },
+    {
+      "name": "slower_activation",
+      "params": {
+        "a": 0.05
+      }
+    }
+  ]
+}

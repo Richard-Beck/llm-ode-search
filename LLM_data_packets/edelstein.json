@@ -1,0 +1,110 @@
+{
+  "baseline": {
+    "condition": "baseline",
+    "time": {
+      "t0": 0,
+      "t1": 24,
+      "n_points": 7,
+      "dt_median": 4
+    },
+    "variables": "Rstar",
+    "variable_summaries": {
+      "Rstar": 7
+    },
+    "pairwise": [],
+    "series_preview": {
+      "Rstar": {
+        "time": [0, 4, 8, 12, 16, 20, 24],
+        "mean": [-0.0128, 0.5631, 0.1409, 0.0135, 0.472, 0.1263, 0.0008],
+        "sd": [0.0042, 0.0202, 0.0139, 0.0188, 0.0097, 0.0074, 0.0155]
+      }
+    },
+    "inputs": [
+      {
+        "name": "L",
+        "type": "piecewise",
+        "schedule": [
+          [
+            0,
+            2,
+            0
+          ],
+          [
+            2,
+            6,
+            1
+          ],
+          [
+            6,
+            14,
+            0
+          ],
+          [
+            14,
+            18,
+            0.5
+          ],
+          [
+            18,
+            25,
+            0
+          ]
+        ]
+      }
+    ]
+  },
+  "slower_activation": {
+    "condition": "slower_activation",
+    "time": {
+      "t0": 0,
+      "t1": 24,
+      "n_points": 7,
+      "dt_median": 4
+    },
+    "variables": "Rstar",
+    "variable_summaries": {
+      "Rstar": 7
+    },
+    "pairwise": [],
+    "series_preview": {
+      "Rstar": {
+        "time": [0, 4, 8, 12, 16, 20, 24],
+        "mean": [0.0137, 0.1811, 0.0352, -0.0095, 0.1574, 0.0557, 0.0254],
+        "sd": [0.0209, 0.0297, 0.0106, 0.0224, 0.0224, 0.0107, 0.0205]
+      }
+    },
+    "inputs": [
+      {
+        "name": "L",
+        "type": "piecewise",
+        "schedule": [
+          [
+            0,
+            2,
+            0
+          ],
+          [
+            2,
+            6,
+            1
+          ],
+          [
+            6,
+            14,
+            0
+          ],
+          [
+            14,
+            18,
+            0.5
+          ],
+          [
+            18,
+            25,
+            0
+          ]
+        ]
+      }
+    ]
+  }
+}

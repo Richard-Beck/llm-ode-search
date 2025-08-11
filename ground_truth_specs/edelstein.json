@@ -1,0 +1,19 @@
+{
+  "model":{
+    "name":"Edelstein",
+    "states":["R","RL","Rstar"],
+    "params":["k1","km1","ka","kma","kr"],
+    "ode_text":"d/dt(R) = -k1*L*R + km1*RL + kr*Rstar;\nd/dt(RL) = k1*L*R - km1*RL - ka*RL + kma*Rstar;\nd/dt(Rstar) = ka*RL - kma*Rstar - kr*Rstar;"
+  },
+  "init":{"R":1.0,"RL":0.0,"Rstar":0.0},
+  "param_values":{"k1":5.0,"km1":2.0,"ka":3.0,"kma":1.0,"kr":0.5},
+  "inputs":[{"name":"L","type":"piecewise","schedule":[[0,2,0],[2,6,1],[6,14,0],[14,18,0.5],[18,25,0]]}],
+  "observe":{"Rstar":"Rstar","R":"R","RL":"RL"},
+  "noise":[{"target":"Rstar","type":"gaussian","sigma":0.02}],
+  "sampling":{"t0":0.0,"t1":25.0,"dt":0.1},
+  "replicates":3,
+  "conditions":[
+    {"name":"baseline","init":{},"params":{}},
+    {"name":"slower_activation","init":{},"params":{"ka":0.5}}
+  ]
+}
