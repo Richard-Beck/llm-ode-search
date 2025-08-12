@@ -1,0 +1,102 @@
+{
+  "initial_proposal": {
+    "model": {
+      "name": "oscillator_model",
+      "states": [
+        "N",
+        "P"
+      ],
+      "params": [
+        "k1",
+        "k2",
+        "k3",
+        "k4"
+      ],
+      "ode_text": "d/dt(N) = k1 - k2*N - k3*N*P;\nd/dt(P) = k3*N*P - k4*P;"
+    },
+    "init": {
+      "N": 7.6667,
+      "P": 1.5824
+    },
+    "param_values": {
+      "k1": 0.5,
+      "k2": 0.1,
+      "k3": 0.05,
+      "k4": 0.2
+    },
+    "inputs": [],
+    "observe": {
+      "N": "N",
+      "P": "P"
+    },
+    "noise": [
+      {
+        "target": "N",
+        "type": "gaussian",
+        "sigma": 1
+      },
+      {
+        "target": "P",
+        "type": "gaussian",
+        "sigma": 0.1
+      }
+    ],
+    "sampling": {
+      "t0": 0,
+      "t1": 40,
+      "dt": 1
+    },
+    "replicates": 1,
+    "conditions": [
+      {
+        "name": "damped"
+      },
+      {
+        "name": "oscillatory"
+      }
+    ]
+  },
+  "optimization_summary": {
+    "initial_objective_value": 3.8688,
+    "final_objective_value": 10000000000,
+    "improvement_ratio": 2584780202.3378,
+    "optimized_parameters": {
+      "k1": 0.5,
+      "k2": 0.1,
+      "k3": 0.05,
+      "k4": 0.2
+    },
+    "convergence_code": 0,
+    "convergence_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL"
+  },
+  "fit_quality": [
+    {
+      "condition": "damped",
+      "variable": "N",
+      "n_points": 6,
+      "rmse": 2.2931,
+      "correlation": 0.6688
+    },
+    {
+      "condition": "damped",
+      "variable": "P",
+      "n_points": 6,
+      "rmse": 2.3126,
+      "correlation": 0.2387
+    },
+    {
+      "condition": "oscillatory",
+      "variable": "N",
+      "n_points": 6,
+      "rmse": 2.9134,
+      "correlation": 0.4342
+    },
+    {
+      "condition": "oscillatory",
+      "variable": "P",
+      "n_points": 6,
+      "rmse": 1.0432,
+      "correlation": 0.351
+    }
+  ]
+}

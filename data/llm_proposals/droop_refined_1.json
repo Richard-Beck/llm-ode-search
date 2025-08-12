@@ -1,0 +1,83 @@
+{
+  "model": {
+    "name": "substrate_inhibition_growth",
+    "states": [
+      "S",
+      "X",
+      "I"
+    ],
+    "params": [
+      "rho_max",
+      "Ks",
+      "mu_max",
+      "Q0",
+      "Q",
+      "m",
+      "Ki"
+    ],
+    "ode_text": "rho = rho_max*S/(Ks+S);\nmu = mu_max*(1 - Q0/Q);\nd/dt(S) = -rho*X;\nd/dt(X) = (mu - m)*X;\nd/dt(I) = Ki*S*X;"
+  },
+  "init": {
+    "S": 5,
+    "X": 0.05,
+    "I": 0
+  },
+  "param_values": {
+    "rho_max": 0.5,
+    "Ks": 1,
+    "mu_max": 0.8,
+    "Q0": 0.1,
+    "Q": 0.5,
+    "m": 0.05,
+    "Ki": 0.01
+  },
+  "inputs": [],
+  "observe": {
+    "S": "S",
+    "X": "X"
+  },
+  "noise": [
+    {
+      "target": "S",
+      "type": "gaussian",
+      "sigma": 0.1
+    },
+    {
+      "target": "X",
+      "type": "gaussian",
+      "sigma": 2
+    }
+  ],
+  "sampling": {
+    "t0": 0,
+    "t1": 48,
+    "dt": 8
+  },
+  "replicates": 1,
+  "conditions": [
+    {
+      "name": "S_high",
+      "init": {
+        "S": 5,
+        "X": 0.0478,
+        "I": 0
+      }
+    },
+    {
+      "name": "S_low",
+      "init": {
+        "S": 0.8,
+        "X": 0.0488,
+        "I": 0
+      }
+    },
+    {
+      "name": "S_mid",
+      "init": {
+        "S": 2,
+        "X": 0.0525,
+        "I": 0
+      }
+    }
+  ]
+}

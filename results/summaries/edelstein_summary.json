@@ -1,0 +1,112 @@
+{
+  "initial_proposal": {
+    "model": {
+      "name": "simple_activation_model",
+      "states": [
+        "Rstar"
+      ],
+      "params": [
+        "k_in",
+        "k_out",
+        "Rstar_basal"
+      ],
+      "ode_text": "d/dt(Rstar) = k_in * L - k_out * Rstar;"
+    },
+    "init": {
+      "Rstar": 0
+    },
+    "param_values": {
+      "k_in": 0.5,
+      "k_out": 0.1,
+      "Rstar_basal": 0
+    },
+    "inputs": [
+      {
+        "name": "L",
+        "type": "piecewise",
+        "schedule": [
+          [
+            0,
+            2,
+            0
+          ],
+          [
+            2,
+            6,
+            1
+          ],
+          [
+            6,
+            14,
+            0
+          ],
+          [
+            14,
+            18,
+            0.5
+          ],
+          [
+            18,
+            25,
+            0
+          ]
+        ]
+      }
+    ],
+    "observe": {
+      "Rstar": "Rstar"
+    },
+    "noise": [
+      {
+        "target": "Rstar",
+        "type": "gaussian",
+        "sigma": 0.02
+      }
+    ],
+    "sampling": {
+      "t0": 0,
+      "t1": 24,
+      "dt": 4
+    },
+    "replicates": 1,
+    "conditions": [
+      {
+        "name": "baseline"
+      },
+      {
+        "name": "slower_activation",
+        "params": {
+          "k_in": 0.2
+        }
+      }
+    ]
+  },
+  "optimization_summary": {
+    "initial_objective_value": 3.8688,
+    "final_objective_value": 4.9863,
+    "improvement_ratio": 1.2888,
+    "optimized_parameters": {
+      "k_out": 0.1,
+      "Rstar_basal": 0.0001,
+      "k_in_slower_activation": 0.2
+    },
+    "convergence_code": 0,
+    "convergence_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL"
+  },
+  "fit_quality": [
+    {
+      "condition": "baseline",
+      "variable": "Rstar",
+      "n_points": 7,
+      "rmse": 0.7781,
+      "correlation": 0.3873
+    },
+    {
+      "condition": "slower_activation",
+      "variable": "Rstar",
+      "n_points": 7,
+      "rmse": 0.3323,
+      "correlation": 0.2547
+    }
+  ]
+}

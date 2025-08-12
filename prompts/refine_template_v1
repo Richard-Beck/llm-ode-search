@@ -1,0 +1,108 @@
+You are an expert in dynamical systems and mechanistic modeling. Your task is to analyze the results of a model fitting run and propose an improved, refined model specification.
+
+CONTEXT AND PREVIOUS RESULTS (read-only)
+An initial model was proposed and then optimized to fit experimental data. The fit was not perfect. Your goal is to suggest a specific, structural change to the model's ordinary differential equations (ODEs) to address the weaknesses identified in the summary below.
+
+Here is a complete summary of the previous run:
+{{model_summary_json}}
+
+DATA (read-only)
+-----------
+Packet (array of condition objects):
+{{packet_json}}
+
+ANALYSIS AND REFINEMENT TASK
+Based on your analysis of the summary, propose a new, single JSON object that refines the model.
+
+Focus on Structural Changes: Your main task is to modify the ode_text. Do NOT just tweak the param_values. Your change should be a logical, incremental improvement.
+
+Update All Necessary Fields: If you change the ode_text, you must also update the states and params lists. You must also provide plausible initial guesses for any new parameters.
+
+Adhere to the Schema: The output must be a single, valid JSON object that strictly follows the schema and rules provided below.
+
+SCHEMA (required keys and types)
+-----------
+{
+  "model": {
+    "name": string,                       // short ID you choose
+    "states": [string, ...],              // unique; length >= 1
+    "params": [string, ...],              // unique; length >= 1
+    "ode_text": string                    // raw rxode2 block; see rules
+  },
+  "init": { state: number, ... },         // baseline initial values for ALL states
+  "param_values": { param: number, ... }, // initial guesses for ALL GLOBAL parameters (shared across all conditions).
+  "inputs": [                             
+    { "name": string,
+      "type": "piecewise" | "constant",
+      "schedule": [[t0, t1, value], ...]  // only if type=="piecewise"
+      // or "value": number                 // only if type=="constant"
+    }, ...
+  ],
+  "observe": { obs_name: state_name, ... }, // at least one observable (must match a variable in the DATA); map to states (must match a variable in your ODE model spec.)
+  "noise": [
+    { "target": obs_name, "type": "gaussian", "sigma": number } |
+    { "target": obs_name, "type": "lognormal", "sigma": number } |
+    { "target": obs_name, "type": "negbin", "k": number }
+  ],
+  "sampling": { "t0": number, "t1": number, "dt": number },
+  "replicates": integer >= 1,
+  "conditions": [
+    { "name": string,
+      "init": { state: number, ... },     // optional overrides (subset of states)
+      "params": { param: number, ... }    // OPTIONAL: Override guesses for LOCAL (condition-specific) parameters.
+    }, ...
+  ]
+}
+
+PARAMETER SCOPE RULES
+-----------
+- The top-level `param_values` block defines GLOBAL parameters. These are assumed to have the same value for all conditions and will be optimized as single values.
+- If a parameter's value is expected to be DIFFERENT for a specific condition, define it inside that condition's `params` block.
+- Any parameter listed in a condition's `params` block will be treated as a LOCAL parameter, separate from the global value and from other conditions.
+- If a parameter is NOT overridden in a condition's `params` block, it automatically uses the GLOBAL value from the top-level `param_values`.
+
+ODE_TEXT RULES (rxode2)
+-----------
+- Provide raw equations only; DO NOT wrap in a function or braces.
+- Each state X must have exactly one derivative line:  d/dt(X) = <expr>;
+- You may define algebraic helpers on separate lines (e.g.,  alpha = a0 + a1*S;).
+- Symbols allowed: state names, parameter names, input names, numbers, + - * / ^ () exp log pow ifelse.
+- If you reference an input (e.g., L), it MUST appear in "inputs" with an identical name.
+- End each line with a semicolon.
+- Example style:
+  rho = rho_max*S/(Ks+S);
+  mu  = mu_max*(1 - Q0/Q);
+  d/dt(X) = (mu - m)*X;
+
+CONSTRAINTS (must all hold)
+-----------
+1) Names
+   - "states", "params", and input "name"s are unique and case-sensitive.
+   - Names cannot be "time" or "t".
+2) Coverage
+   - Every state in "states" appears on the LHS of exactly one d/dt(...) in "ode_text".
+   - Every param in "params" is used somewhere in "ode_text".
+   - "init" provides a numeric value for EVERY state (baseline).
+   - "param_values" provides a numeric value for EVERY param.
+   - "observe" maps at least one observable from the DATA to an existing model state (by its exact name).
+3) Inputs
+   - If any input is referenced in "ode_text", include it in "inputs".
+   - For "piecewise", each triple [t0, t1, value] has t0 < t1, numbers only.
+   - Input change times should align with features seen in the packet where possible.
+4) Sampling
+   - Use a reasonable grid covering the packet’s time range; "t0" <= min time, "t1" >= max time.
+5) Conditions
+   - Include one condition per packet condition (by the same name), unless the packet implies a single baseline condition.
+   - Per-condition "init"/"params" may override subsets; otherwise omit those keys.
+6) JSON hygiene
+   - ONE top-level JSON object only.
+   - No trailing commas; no comments; all numbers finite; strings quoted.
+
+DERIVATION HINTS (non-binding)
+-----------
+- Use variable_summaries, pairwise lags, and input schedules from the packet to choose a plausible structure and initial guesses.
+- Keep complexity low–moderate (1–4 states, 4–10 parameters). Favor identifiable forms.
+
+OUTPUT
+-----------
+Return ONLY the single, complete, and refined JSON object. Do not include explanations or prose.

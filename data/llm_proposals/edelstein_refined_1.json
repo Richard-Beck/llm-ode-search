@@ -1,23 +1,29 @@
 {
   "model": {
-    "name": "example_model",
+    "name": "refined_activation_model",
     "states": [
-      "Rstar"
+      "Rstar",
+      "Rstar_act"
     ],
     "params": [
-      "a",
-      "b",
-      "c"
+      "k_in",
+      "k_out",
+      "k_act",
+      "k_deact",
+      "Rstar_basal"
     ],
-    "ode_text": "d/dt(Rstar) = a*Rstar - b*L; L = L_input;"
+    "ode_text": "d/dt(Rstar) = k_in * L - k_out * Rstar - k_act * Rstar + k_deact * Rstar_act;\nd/dt(Rstar_act) = k_act * Rstar - k_deact * Rstar_act;"
   },
   "init": {
-    "Rstar": 0.1
+    "Rstar": 0,
+    "Rstar_act": 0
   },
   "param_values": {
-    "a": 0.1,
-    "b": 0.2,
-    "c": 0.3
+    "k_in": 0.5,
+    "k_out": 0.1,
+    "k_act": 0.3,
+    "k_deact": 0.2,
+    "Rstar_basal": 0
   },
   "inputs": [
     {
@@ -53,13 +59,13 @@
     }
   ],
   "observe": {
-    "R_obs": "Rstar"
+    "Rstar": "Rstar_act"
   },
   "noise": [
     {
-      "target": "R_obs",
+      "target": "Rstar",
       "type": "gaussian",
-      "sigma": 0.1
+      "sigma": 0.02
     }
   ],
   "sampling": {
@@ -70,13 +76,12 @@
   "replicates": 1,
   "conditions": [
     {
-      "name": "baseline",
-      "init": {}
+      "name": "baseline"
     },
     {
       "name": "slower_activation",
       "params": {
-        "a": 0.05
+        "k_in": 0.2
       }
     }
   ]

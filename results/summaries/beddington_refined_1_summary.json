@@ -1,0 +1,110 @@
+{
+  "initial_proposal": {
+    "model": {
+      "name": "refined_oscillator",
+      "states": [
+        "N",
+        "P",
+        "I"
+      ],
+      "params": [
+        "k1",
+        "k2",
+        "k3",
+        "k4",
+        "k5",
+        "k6"
+      ],
+      "ode_text": "d/dt(N) = k1 - k2*N - k3*N*P;\nd/dt(P) = k3*N*P - k4*P - k5*I;\nd/dt(I) = k6*N - k5*I;"
+    },
+    "init": {
+      "N": 7.6667,
+      "P": 1.5824,
+      "I": 0
+    },
+    "param_values": {
+      "k1": 0.5,
+      "k2": 0.1,
+      "k3": 0.05,
+      "k4": 0.2,
+      "k5": 0.1,
+      "k6": 0.01
+    },
+    "inputs": [],
+    "observe": {
+      "N": "N",
+      "P": "P"
+    },
+    "noise": [
+      {
+        "target": "N",
+        "type": "gaussian",
+        "sigma": 1
+      },
+      {
+        "target": "P",
+        "type": "gaussian",
+        "sigma": 0.1
+      }
+    ],
+    "sampling": {
+      "t0": 0,
+      "t1": 40,
+      "dt": 1
+    },
+    "replicates": 1,
+    "conditions": [
+      {
+        "name": "damped"
+      },
+      {
+        "name": "oscillatory"
+      }
+    ]
+  },
+  "optimization_summary": {
+    "initial_objective_value": 3.8688,
+    "final_objective_value": 10000000000,
+    "improvement_ratio": 2584780202.3378,
+    "optimized_parameters": {
+      "k1": 0.5,
+      "k2": 0.1,
+      "k3": 0.05,
+      "k4": 0.2,
+      "k5": 0.1,
+      "k6": 0.01
+    },
+    "convergence_code": 0,
+    "convergence_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL"
+  },
+  "fit_quality": [
+    {
+      "condition": "damped",
+      "variable": "N",
+      "n_points": 6,
+      "rmse": 2.4734,
+      "correlation": 0.6222
+    },
+    {
+      "condition": "damped",
+      "variable": "P",
+      "n_points": 6,
+      "rmse": 2.573,
+      "correlation": 0.1695
+    },
+    {
+      "condition": "oscillatory",
+      "variable": "N",
+      "n_points": 6,
+      "rmse": 3.1721,
+      "correlation": 0.34
+    },
+    {
+      "condition": "oscillatory",
+      "variable": "P",
+      "n_points": 6,
+      "rmse": 1.2221,
+      "correlation": 0.3384
+    }
+  ]
+}

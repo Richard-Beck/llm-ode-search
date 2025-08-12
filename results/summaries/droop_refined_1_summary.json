@@ -1,0 +1,145 @@
+{
+  "initial_proposal": {
+    "model": {
+      "name": "substrate_inhibition_growth",
+      "states": [
+        "S",
+        "X",
+        "I"
+      ],
+      "params": [
+        "rho_max",
+        "Ks",
+        "mu_max",
+        "Q0",
+        "Q",
+        "m",
+        "Ki"
+      ],
+      "ode_text": "rho = rho_max*S/(Ks+S);\nmu = mu_max*(1 - Q0/Q);\nd/dt(S) = -rho*X;\nd/dt(X) = (mu - m)*X;\nd/dt(I) = Ki*S*X;"
+    },
+    "init": {
+      "S": 5,
+      "X": 0.05,
+      "I": 0
+    },
+    "param_values": {
+      "rho_max": 0.5,
+      "Ks": 1,
+      "mu_max": 0.8,
+      "Q0": 0.1,
+      "Q": 0.5,
+      "m": 0.05,
+      "Ki": 0.01
+    },
+    "inputs": [],
+    "observe": {
+      "S": "S",
+      "X": "X"
+    },
+    "noise": [
+      {
+        "target": "S",
+        "type": "gaussian",
+        "sigma": 0.1
+      },
+      {
+        "target": "X",
+        "type": "gaussian",
+        "sigma": 2
+      }
+    ],
+    "sampling": {
+      "t0": 0,
+      "t1": 48,
+      "dt": 8
+    },
+    "replicates": 1,
+    "conditions": [
+      {
+        "name": "S_high",
+        "init": {
+          "S": 5,
+          "X": 0.0478,
+          "I": 0
+        }
+      },
+      {
+        "name": "S_low",
+        "init": {
+          "S": 0.8,
+          "X": 0.0488,
+          "I": 0
+        }
+      },
+      {
+        "name": "S_mid",
+        "init": {
+          "S": 2,
+          "X": 0.0525,
+          "I": 0
+        }
+      }
+    ]
+  },
+  "optimization_summary": {
+    "initial_objective_value": 3.8688,
+    "final_objective_value": 10000000000,
+    "improvement_ratio": 2584780202.3378,
+    "optimized_parameters": {
+      "rho_max": 0.5,
+      "Ks": 1,
+      "mu_max": 0.8,
+      "Q0": 0.1,
+      "Q": 0.5,
+      "m": 0.05,
+      "Ki": 0.01
+    },
+    "convergence_code": 0,
+    "convergence_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL"
+  },
+  "fit_quality": [
+    {
+      "condition": "S_high",
+      "variable": "S",
+      "n_points": 7,
+      "rmse": 0.6385,
+      "correlation": 0.9435
+    },
+    {
+      "condition": "S_high",
+      "variable": "X",
+      "n_points": 7,
+      "rmse": 35984595951.2095,
+      "correlation": -0.311
+    },
+    {
+      "condition": "S_low",
+      "variable": "S",
+      "n_points": 7,
+      "rmse": 0.1349,
+      "correlation": 0.8887
+    },
+    {
+      "condition": "S_low",
+      "variable": "X",
+      "n_points": 7,
+      "rmse": 36737404217.6288,
+      "correlation": -0.3438
+    },
+    {
+      "condition": "S_mid",
+      "variable": "S",
+      "n_points": 7,
+      "rmse": 0.0759,
+      "correlation": 0.9943
+    },
+    {
+      "condition": "S_mid",
+      "variable": "X",
+      "n_points": 7,
+      "rmse": 39522824158.5175,
+      "correlation": -0.3451
+    }
+  ]
+}
