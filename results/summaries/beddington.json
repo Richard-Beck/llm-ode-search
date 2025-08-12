@@ -12,16 +12,16 @@
         "k3",
         "k4"
       ],
-      "ode_text": "d/dt(N) = k1 - k2*N - k3*N*P;\nd/dt(P) = k3*N*P - k4*P;"
+      "ode_text": "d/dt(N) = k1*P - k2*N;\nd/dt(P) = k3*N - k4*P;"
     },
     "init": {
-      "N": 7.6667,
-      "P": 1.5824
+      "N": 6,
+      "P": 1.58
     },
     "param_values": {
       "k1": 0.5,
       "k2": 0.1,
-      "k3": 0.05,
+      "k3": 0.3,
       "k4": 0.2
     },
     "inputs": [],
@@ -46,7 +46,7 @@
       "t1": 40,
       "dt": 1
     },
-    "replicates": 1,
+    "replicates": 10,
     "conditions": [
       {
         "name": "damped"
@@ -57,14 +57,14 @@
     ]
   },
   "optimization_summary": {
-    "initial_objective_value": 3.8688,
-    "final_objective_value": 10000000000,
-    "improvement_ratio": 2584780202.3378,
+    "initial_objective_value": 131265116806.4482,
+    "final_objective_value": 323.3931,
+    "improvement_ratio": 2.4637e-09,
     "optimized_parameters": {
-      "k1": 0.5,
-      "k2": 0.1,
-      "k3": 0.05,
-      "k4": 0.2
+      "k1": 323.4915,
+      "k2": 0.0001,
+      "k3": 687.5063,
+      "k4": 0.0001
     },
     "convergence_code": 0,
     "convergence_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL"
@@ -73,30 +73,22 @@
     {
       "condition": "damped",
       "variable": "N",
-      "n_points": 6,
-      "rmse": 2.2931,
-      "correlation": 0.6688
+      "n_points": 20
     },
     {
       "condition": "damped",
       "variable": "P",
-      "n_points": 6,
-      "rmse": 2.3126,
-      "correlation": 0.2387
+      "n_points": 20
     },
     {
       "condition": "oscillatory",
       "variable": "N",
-      "n_points": 6,
-      "rmse": 2.9134,
-      "correlation": 0.4342
+      "n_points": 20
     },
     {
       "condition": "oscillatory",
       "variable": "P",
-      "n_points": 6,
-      "rmse": 1.0432,
-      "correlation": 0.351
+      "n_points": 20
     }
   ]
 }

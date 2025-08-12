@@ -3,22 +3,30 @@
     "model": {
       "name": "simple_activation_model",
       "states": [
-        "Rstar"
+        "Rstar",
+        "S"
       ],
       "params": [
-        "k_in",
-        "k_out",
-        "Rstar_basal"
+        "rho_max",
+        "Ks",
+        "a0",
+        "a1",
+        "mu_max",
+        "m"
       ],
-      "ode_text": "d/dt(Rstar) = k_in * L - k_out * Rstar;"
+      "ode_text": "rho = rho_max*S/(Ks+S);\nmu = mu_max*(1 - Rstar/(a0 + a1*S));\nd/dt(S) = -rho*S;\nd/dt(Rstar) = (mu - m)*Rstar;"
     },
     "init": {
-      "Rstar": 0
+      "Rstar": 0.0168,
+      "S": 1
     },
     "param_values": {
-      "k_in": 0.5,
-      "k_out": 0.1,
-      "Rstar_basal": 0
+      "rho_max": 0.5,
+      "Ks": 0.1,
+      "a0": 0.02,
+      "a1": 0.5,
+      "mu_max": 0.8,
+      "m": 0.05
     },
     "inputs": [
       {
@@ -65,8 +73,8 @@
     ],
     "sampling": {
       "t0": 0,
-      "t1": 24,
-      "dt": 4
+      "t1": 25,
+      "dt": 1
     },
     "replicates": 1,
     "conditions": [
@@ -76,37 +84,43 @@
       {
         "name": "slower_activation",
         "params": {
-          "k_in": 0.2
+          "rho_max": 0.2,
+          "mu_max": 0.4
         }
       }
     ]
   },
   "optimization_summary": {
-    "initial_objective_value": 3.8688,
-    "final_objective_value": 4.9863,
-    "improvement_ratio": 1.2888,
+    "initial_objective_value": 0.4425,
+    "final_objective_value": 0.1402,
+    "improvement_ratio": 0.317,
     "optimized_parameters": {
-      "k_out": 0.1,
-      "Rstar_basal": 0.0001,
-      "k_in_slower_activation": 0.2
+      "rho_max": 3.4243,
+      "Ks": 0.7405,
+      "a0": 0.0001,
+      "a1": 10.9152,
+      "mu_max": 15.7494,
+      "m": 0.0001,
+      "rho_max_slower_activation": 9.4882,
+      "mu_max_slower_activation": 12.392
     },
     "convergence_code": 0,
-    "convergence_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL"
+    "convergence_message": "CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"
   },
   "fit_quality": [
     {
       "condition": "baseline",
       "variable": "Rstar",
-      "n_points": 7,
-      "rmse": 0.7781,
-      "correlation": 0.3873
+      "n_points": 2,
+      "rmse": 0.0645,
+      "correlation": -1
     },
     {
       "condition": "slower_activation",
       "variable": "Rstar",
-      "n_points": 7,
-      "rmse": 0.3323,
-      "correlation": 0.2547
+      "n_points": 2,
+      "rmse": 0.0421,
+      "correlation": 1
     }
   ]
 }

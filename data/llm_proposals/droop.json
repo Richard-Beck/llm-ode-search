@@ -1,47 +1,39 @@
 {
   "model": {
-    "name": "substrate_dependent_growth",
+    "name": "growth_model",
     "states": [
-      "S",
-      "X"
+      "X",
+      "S"
     ],
     "params": [
-      "rho_max",
-      "Ks",
       "mu_max",
+      "Ks",
+      "m",
       "Q0",
-      "Q",
-      "m"
+      "Q"
     ],
-    "ode_text": "rho = rho_max*S/(Ks+S);\nmu = mu_max*(1 - Q0/Q);\nd/dt(S) = -rho*X;\nd/dt(X) = (mu - m)*X;"
+    "ode_text": "rho = mu_max * S / (Ks + S);\nmu = mu_max * (1 - Q0 / Q);\nd/dt(X) = (mu - m) * X;\nd/dt(S) = -rho;"
   },
   "init": {
-    "S": 5,
-    "X": 0.05
+    "X": 0.05,
+    "S": 5
   },
   "param_values": {
-    "rho_max": 0.5,
+    "mu_max": 1.5,
     "Ks": 1,
-    "mu_max": 0.8,
-    "Q0": 0.1,
-    "Q": 0.5,
-    "m": 0.05
+    "m": 0.1,
+    "Q0": 0.8,
+    "Q": 1
   },
   "inputs": [],
   "observe": {
-    "S": "S",
     "X": "X"
   },
   "noise": [
     {
-      "target": "S",
-      "type": "gaussian",
-      "sigma": 0.1
-    },
-    {
       "target": "X",
       "type": "gaussian",
-      "sigma": 2
+      "sigma": 0.1
     }
   ],
   "sampling": {
@@ -54,22 +46,19 @@
     {
       "name": "S_high",
       "init": {
-        "S": 5,
-        "X": 0.0478
+        "S": 5
       }
     },
     {
       "name": "S_low",
       "init": {
-        "S": 0.8,
-        "X": 0.0488
+        "S": 0.8
       }
     },
     {
       "name": "S_mid",
       "init": {
-        "S": 2,
-        "X": 0.0525
+        "S": 2
       }
     }
   ]

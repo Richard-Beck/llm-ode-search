@@ -1,0 +1,203 @@
+---
+title: "workflow"
+author: "RJB"
+date: "2025-08-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir="~/projects/llm-ode-search/")
+```
+
+
+```{r}
+source("R/simulation.R")
+
+models <- c("beddington","droop","edelstein")
+
+for(model in models){
+  spec <- jsonlite::fromJSON(paste0("data/ground_truth_specs/",model,".json"), simplifyVector=FALSE)
+  df_sam <- simulate_from_spec(spec)
+  target_data_df <- df_sam %>%
+    group_by(condition, time, variable, model) %>%
+    summarise(value = mean(value), .groups = "drop")
+  write_csv(target_data_df, paste0("results/csv/",model,".csv"))
+  packet_json <- summarize_for_llm(df_sam, spec_inputs = spec$inputs)
+  writeLines(packet_json, paste0("data/LLM_data_packets/",model,".json"))
+  
+  spec_t <- make_spec_transparent(spec)
+  df <- simulate_from_spec(spec_t)
+  
+  p <- ggplot(df,aes(x=time,y=value))+
+    facet_grid(cols=vars(condition),rows = vars(variable),scales="free")+
+    geom_line(aes(group=replicate,color=as.character(replicate)))+
+    geom_point(data=target_data_df,color="red")+
+    ggtitle(model)
+  print(p)
+}
+
+
+
+```
+
+```{r}
+source("R/llm_caller.R")
+schema <- read_file("prompts/json_rules")
+LLM_ID <- "qwen-3-coder-480b"
+for(model in models){
+  packet_json <- read_file(paste0("data/LLM_data_packets/",model,".json"))
+  prompt <- compile_prompt("prompts/init_template_v1",
+                           packet_json=packet_json,
+                           model_hints="",schema=schema)
+  outpath <- paste0("data/llm_proposals/",model,".json")
+  dir.create(dirname(outpath), showWarnings = FALSE, recursive = TRUE)
+  llm_result <- call_llm(
+    user_prompt = prompt,
+    out_path = outpath,
+    model = LLM_ID,
+    temperature = 0.1,
+    seed = 42)
+  if (llm_result$ok) {
+    message("\n✔ Successfully generated and saved model proposal to: ", outpath)
+  } else {
+    warning("\n! LLM call failed or returned invalid JSON. Check the raw output file.")
+  }
+
+}
+
+
+```
+
+
+```{r}
+source("R/optimization.R")
+source("R/create_summary_object.R")
+
+for(model in models){
+  spec <- jsonlite::fromJSON(paste0("data/llm_proposals/",model,".json"), simplifyVector=FALSE)
+df_tar <- read.csv(paste0("results/csv/",model,".csv"))
+init_value <- optimize_model(spec,df_tar,method="none")
+opt <- optimize_model(spec, df_tar, method = "optimParallel",ncores = 16)
+spec_opt <- modify_spec_parms(opt$par,spec)
+print(spec_opt$param_values)
+print(spec$param_values)
+df_ini <- simulate_from_spec(make_spec_transparent(spec))
+df_opt <- simulate_from_spec(make_spec_transparent(spec_opt))
+
+df_ini$id <- "init"
+df_opt$id <- "opt"
+
+df <- rbind(df_ini,df_opt)
+
+model_summary <- create_summary_object(
+  llm_spec = spec,
+  opt_results = opt,
+  initial_objective_value = init_value,
+  target_data_df = df_tar,
+  optimized_fit_df = df_opt
+)
+
+summary_output_path <- paste0("results/summaries/",model,".json")
+save_summary_as_json(model_summary, summary_output_path)
+
+
+p <- ggplot(df,aes(x=time,y=value))+
+  facet_grid(cols=vars(condition),rows = vars(variable),scales="free")+
+  geom_line(aes(color=id))+
+  geom_point(data=df_tar,color="red")+
+  ggtitle(model)
+print(p)
+
+p <- ggplot(df_opt,aes(x=time,y=value))+
+  facet_grid(cols=vars(condition),rows = vars(variable),scales="free")+
+  geom_line(aes(color=id))+
+  geom_point(data=df_tar,color="red")+
+  ggtitle(model)
+print(p)
+
+}
+
+
+
+```
+
+```{r}
+source("R/llm_caller.R")
+schema <- read_file("prompts/json_rules")
+LLM_ID <- "qwen-3-coder-480b"
+for(model in models){
+  packet_json <- read_file(paste0("data/LLM_data_packets/",model,".json"))
+  model_summary_json <- read_file(paste0("results/summaries/",model,".json"))
+  prompt <- compile_prompt("prompts/refine_template_v1",
+                           packet_json=packet_json,
+                           model_summary_json=model_summary_json,
+                           model_hints="",schema=schema)
+  outpath <- paste0("data/llm_proposals/",model,"_refined_1.json")
+  dir.create(dirname(outpath), showWarnings = FALSE, recursive = TRUE)
+  llm_result <- call_llm(
+    user_prompt = prompt,
+    out_path = outpath,
+    model = LLM_ID,
+    temperature = 0.1,
+    seed = 42)
+  if (llm_result$ok) {
+    message("\n✔ Successfully generated and saved model proposal to: ", outpath)
+  } else {
+    warning("\n! LLM call failed or returned invalid JSON. Check the raw output file.")
+  }
+
+}
+
+
+```
+```{r}
+source("R/optimization.R")
+source("R/create_summary_object.R")
+
+for(model in models){
+  spec <- jsonlite::fromJSON(paste0("data/llm_proposals/",model,"_refined_1.json"), simplifyVector=FALSE)
+df_tar <- read.csv(paste0("results/csv/",model,".csv"))
+init_value <- optimize_model(spec,df_tar,method="none")
+opt <- optimize_model(spec, df_tar, method = "optimParallel",ncores = 16)
+spec_opt <- modify_spec_parms(opt$par,spec)
+print(spec_opt$param_values)
+print(spec$param_values)
+df_ini <- simulate_from_spec(make_spec_transparent(spec))
+df_opt <- simulate_from_spec(make_spec_transparent(spec_opt))
+
+df_ini$id <- "init"
+df_opt$id <- "opt"
+
+df <- rbind(df_ini,df_opt)
+
+model_summary <- create_summary_object(
+  llm_spec = spec,
+  opt_results = opt,
+  initial_objective_value = init_value,
+  target_data_df = df_tar,
+  optimized_fit_df = df_opt
+)
+
+summary_output_path <- paste0("results/summaries/",model,"_refined_1.json")
+save_summary_as_json(model_summary, summary_output_path)
+
+
+p <- ggplot(df,aes(x=time,y=value))+
+  facet_grid(cols=vars(condition),rows = vars(variable),scales="free")+
+  geom_line(aes(color=id))+
+  geom_point(data=df_tar,color="red")+
+  ggtitle(model)
+print(p)
+
+p <- ggplot(df_opt,aes(x=time,y=value))+
+  facet_grid(cols=vars(condition),rows = vars(variable),scales="free")+
+  geom_line(aes(color=id))+
+  geom_point(data=df_tar,color="red")+
+  ggtitle(model)
+print(p)
+
+}
+
+
+
+```

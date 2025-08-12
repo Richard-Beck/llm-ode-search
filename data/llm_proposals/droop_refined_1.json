@@ -1,51 +1,41 @@
 {
   "model": {
-    "name": "substrate_inhibition_growth",
+    "name": "growth_model_refined",
     "states": [
-      "S",
       "X",
-      "I"
+      "S",
+      "Q"
     ],
     "params": [
-      "rho_max",
-      "Ks",
       "mu_max",
-      "Q0",
-      "Q",
+      "Ks",
       "m",
-      "Ki"
+      "Q0",
+      "k_Q"
     ],
-    "ode_text": "rho = rho_max*S/(Ks+S);\nmu = mu_max*(1 - Q0/Q);\nd/dt(S) = -rho*X;\nd/dt(X) = (mu - m)*X;\nd/dt(I) = Ki*S*X;"
+    "ode_text": "rho = mu_max * S / (Ks + S);\nmu = mu_max * (1 - Q0 / Q);\nd/dt(X) = (mu - m) * X;\nd/dt(S) = -rho;\nd/dt(Q) = k_Q * mu * X;"
   },
   "init": {
-    "S": 5,
     "X": 0.05,
-    "I": 0
+    "S": 5,
+    "Q": 1
   },
   "param_values": {
-    "rho_max": 0.5,
+    "mu_max": 1.5,
     "Ks": 1,
-    "mu_max": 0.8,
-    "Q0": 0.1,
-    "Q": 0.5,
-    "m": 0.05,
-    "Ki": 0.01
+    "m": 0.1,
+    "Q0": 0.8,
+    "k_Q": 0.01
   },
   "inputs": [],
   "observe": {
-    "S": "S",
     "X": "X"
   },
   "noise": [
     {
-      "target": "S",
-      "type": "gaussian",
-      "sigma": 0.1
-    },
-    {
       "target": "X",
       "type": "gaussian",
-      "sigma": 2
+      "sigma": 0.1
     }
   ],
   "sampling": {
@@ -58,25 +48,19 @@
     {
       "name": "S_high",
       "init": {
-        "S": 5,
-        "X": 0.0478,
-        "I": 0
+        "S": 5
       }
     },
     {
       "name": "S_low",
       "init": {
-        "S": 0.8,
-        "X": 0.0488,
-        "I": 0
+        "S": 0.8
       }
     },
     {
       "name": "S_mid",
       "init": {
-        "S": 2,
-        "X": 0.0525,
-        "I": 0
+        "S": 2
       }
     }
   ]

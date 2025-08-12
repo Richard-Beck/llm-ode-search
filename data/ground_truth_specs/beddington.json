@@ -10,7 +10,7 @@
   "inputs":[],
   "observe":{"N":"N","P":"P"},
   "noise":[{"target":"N","type":"negbin","k":20},{"target":"P","type":"gaussian","sigma":0.10}],
-  "sampling":{"t0":0.0,"t1":40.0,"dt":0.2},
+  "sampling":{"t0":0.0,"t1":40.0,"dt":8},
   "replicates":3,
   "conditions":[
     {"name":"oscillatory","init":{},"params":{}},

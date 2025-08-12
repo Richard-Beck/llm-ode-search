@@ -8,9 +8,9 @@
   "init":{"X":0.05,"Q":0.10,"S":5.0},
   "param_values":{"mu_max":0.9,"Q0":0.03,"rho_max":2.0,"Ks":0.3,"m":0.05},
   "inputs":[],
-  "observe":{"X":"X","Q":"Q","S":"S"},
+  "observe":{"X":"X","S":"S"},
   "noise":[{"target":"X","type":"lognormal","sigma":0.07}],
-  "sampling":{"t0":0.0,"t1":48.0,"dt":0.5},
+  "sampling":{"t0":0.0,"t1":48.0,"dt":8},
   "replicates":3,
   "conditions":[
     {"name":"S_high","init":{"S":5.0},"params":{}},

@@ -1,0 +1,127 @@
+{
+  "initial_proposal": {
+    "model": {
+      "name": "growth_model_refined",
+      "states": [
+        "X",
+        "S",
+        "Q"
+      ],
+      "params": [
+        "mu_max",
+        "Ks",
+        "m",
+        "Q0",
+        "k_Q"
+      ],
+      "ode_text": "rho = mu_max * S / (Ks + S);\nmu = mu_max * (1 - Q0 / Q);\nd/dt(X) = (mu - m) * X;\nd/dt(S) = -rho;\nd/dt(Q) = k_Q * mu * X;"
+    },
+    "init": {
+      "X": 0.05,
+      "S": 5,
+      "Q": 1
+    },
+    "param_values": {
+      "mu_max": 1.5,
+      "Ks": 1,
+      "m": 0.1,
+      "Q0": 0.8,
+      "k_Q": 0.01
+    },
+    "inputs": [],
+    "observe": {
+      "X": "X"
+    },
+    "noise": [
+      {
+        "target": "X",
+        "type": "gaussian",
+        "sigma": 0.1
+      }
+    ],
+    "sampling": {
+      "t0": 0,
+      "t1": 48,
+      "dt": 8
+    },
+    "replicates": 1,
+    "conditions": [
+      {
+        "name": "S_high",
+        "init": {
+          "S": 5
+        }
+      },
+      {
+        "name": "S_low",
+        "init": {
+          "S": 0.8
+        }
+      },
+      {
+        "name": "S_mid",
+        "init": {
+          "S": 2
+        }
+      }
+    ]
+  },
+  "optimization_summary": {
+    "initial_objective_value": 1.4400275999640521e+28,
+    "final_objective_value": 19223.5388,
+    "improvement_ratio": 1.3349e-24,
+    "optimized_parameters": {
+      "mu_max": 1.4055,
+      "Ks": 1,
+      "m": 0.522,
+      "Q0": 1.3892,
+      "k_Q": 0.0001
+    },
+    "convergence_code": 52,
+    "convergence_message": "ERROR: ABNORMAL_TERMINATION_IN_LNSRCH"
+  },
+  "fit_quality": [
+    {
+      "condition": "S_high",
+      "variable": "S",
+      "n_points": 4,
+      "rmse": 6.3529e-08,
+      "correlation": 1
+    },
+    {
+      "condition": "S_high",
+      "variable": "X",
+      "n_points": 4,
+      "rmse": 50.8221,
+      "correlation": 0.4095
+    },
+    {
+      "condition": "S_low",
+      "variable": "S",
+      "n_points": 4,
+      "rmse": 1.8264e-10,
+      "correlation": 1
+    },
+    {
+      "condition": "S_low",
+      "variable": "X",
+      "n_points": 4,
+      "rmse": 7.59,
+      "correlation": -0.4962
+    },
+    {
+      "condition": "S_mid",
+      "variable": "S",
+      "n_points": 4,
+      "rmse": 1.3121e-09,
+      "correlation": 1
+    },
+    {
+      "condition": "S_mid",
+      "variable": "X",
+      "n_points": 4,
+      "rmse": 19.947,
+      "correlation": 0.642
+    }
+  ]
+}

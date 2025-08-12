@@ -1,7 +1,50 @@
-# deps: httr2, jsonlite
-library(httr2)
-library(jsonlite)
+# Load necessary libraries for string manipulation.
+suppressPackageStartupMessages({
+  library(readr)
+  library(stringr)
+  library(glue)
+  library(httr2)
+  library(jsonlite)
+})
 
+compile_prompt <- function(template_path, ...) {
+  
+  # 1. Read the template file content.
+  if (!file.exists(template_path)) {
+    stop("Template file not found at: ", template_path)
+  }
+  template_string <- read_file(template_path)
+  
+  # 2. Find all unique placeholders in the template.
+  placeholders <- str_match_all(template_string, "\\{\\{([a-zA-Z0-9_]+)\\}\\}")[[1]][, 2]
+  required_args <- unique(placeholders)
+  
+  # 3. Capture the named arguments provided to the function.
+  provided_args <- list(...)
+  provided_arg_names <- names(provided_args)
+  
+  # 4. Validate that all required arguments were provided.
+  missing_args <- setdiff(required_args, provided_arg_names)
+  
+  if (length(missing_args) > 0) {
+    stop(
+      "Missing required arguments for template '", basename(template_path), "'.\n",
+      "  > Expected: ", paste(required_args, collapse = ", "), "\n",
+      "  > Missing:  ", paste(missing_args, collapse = ", ")
+    )
+  }
+  
+  # 5. Render the prompt using the provided arguments.
+  # The .open and .close arguments tell glue to look for {{...}} syntax.
+  # By removing `.envir`, glue will correctly use the `...` arguments.
+  rendered_prompt <- glue(
+    template_string,
+    .open = "{{",
+    .close = "}}"
+  )
+  
+  return(as.character(rendered_prompt))
+}
 # A robust function to extract a JSON string from LLM output
 extract_json <- function(text) {
   # This regex looks for a ```json ... ``` or ``` ... ``` block

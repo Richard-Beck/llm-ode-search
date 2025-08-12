@@ -1,34 +1,32 @@
 {
   "initial_proposal": {
     "model": {
-      "name": "refined_oscillator",
+      "name": "delayed_oscillator_model",
       "states": [
         "N",
         "P",
-        "I"
+        "N_delay"
       ],
       "params": [
         "k1",
         "k2",
         "k3",
         "k4",
-        "k5",
-        "k6"
+        "tau"
       ],
-      "ode_text": "d/dt(N) = k1 - k2*N - k3*N*P;\nd/dt(P) = k3*N*P - k4*P - k5*I;\nd/dt(I) = k6*N - k5*I;"
+      "ode_text": "d/dt(N) = k1*P - k2*N;\nd/dt(P) = k3*N_delay - k4*P;\nd/dt(N_delay) = (N - N_delay)/tau;"
     },
     "init": {
-      "N": 7.6667,
-      "P": 1.5824,
-      "I": 0
+      "N": 6,
+      "P": 1.58,
+      "N_delay": 6
     },
     "param_values": {
       "k1": 0.5,
       "k2": 0.1,
-      "k3": 0.05,
+      "k3": 0.3,
       "k4": 0.2,
-      "k5": 0.1,
-      "k6": 0.01
+      "tau": 1
     },
     "inputs": [],
     "observe": {
@@ -52,7 +50,7 @@
       "t1": 40,
       "dt": 1
     },
-    "replicates": 1,
+    "replicates": 10,
     "conditions": [
       {
         "name": "damped"
@@ -63,16 +61,15 @@
     ]
   },
   "optimization_summary": {
-    "initial_objective_value": 3.8688,
-    "final_objective_value": 10000000000,
-    "improvement_ratio": 2584780202.3378,
+    "initial_objective_value": 9870082047.4106,
+    "final_objective_value": 323.3931,
+    "improvement_ratio": 3.2765e-08,
     "optimized_parameters": {
-      "k1": 0.5,
-      "k2": 0.1,
-      "k3": 0.05,
-      "k4": 0.2,
-      "k5": 0.1,
-      "k6": 0.01
+      "k1": 86.8025,
+      "k2": 0.0001,
+      "k3": 289.6908,
+      "k4": 0.0001,
+      "tau": 0.0001
     },
     "convergence_code": 0,
     "convergence_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL"
@@ -81,30 +78,22 @@
     {
       "condition": "damped",
       "variable": "N",
-      "n_points": 6,
-      "rmse": 2.4734,
-      "correlation": 0.6222
+      "n_points": 20
     },
     {
       "condition": "damped",
       "variable": "P",
-      "n_points": 6,
-      "rmse": 2.573,
-      "correlation": 0.1695
+      "n_points": 20
     },
     {
       "condition": "oscillatory",
       "variable": "N",
-      "n_points": 6,
-      "rmse": 3.1721,
-      "correlation": 0.34
+      "n_points": 20
     },
     {
       "condition": "oscillatory",
       "variable": "P",
-      "n_points": 6,
-      "rmse": 1.2221,
-      "correlation": 0.3384
+      "n_points": 20
     }
   ]
 }

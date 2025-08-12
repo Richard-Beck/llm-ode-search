@@ -2,22 +2,30 @@
   "model": {
     "name": "simple_activation_model",
     "states": [
-      "Rstar"
+      "Rstar",
+      "S"
     ],
     "params": [
-      "k_in",
-      "k_out",
-      "Rstar_basal"
+      "rho_max",
+      "Ks",
+      "a0",
+      "a1",
+      "mu_max",
+      "m"
     ],
-    "ode_text": "d/dt(Rstar) = k_in * L - k_out * Rstar;"
+    "ode_text": "rho = rho_max*S/(Ks+S);\nmu = mu_max*(1 - Rstar/(a0 + a1*S));\nd/dt(S) = -rho*S;\nd/dt(Rstar) = (mu - m)*Rstar;"
   },
   "init": {
-    "Rstar": 0
+    "Rstar": 0.0168,
+    "S": 1
   },
   "param_values": {
-    "k_in": 0.5,
-    "k_out": 0.1,
-    "Rstar_basal": 0
+    "rho_max": 0.5,
+    "Ks": 0.1,
+    "a0": 0.02,
+    "a1": 0.5,
+    "mu_max": 0.8,
+    "m": 0.05
   },
   "inputs": [
     {
@@ -64,8 +72,8 @@
   ],
   "sampling": {
     "t0": 0,
-    "t1": 24,
-    "dt": 4
+    "t1": 25,
+    "dt": 1
   },
   "replicates": 1,
   "conditions": [
@@ -75,7 +83,8 @@
     {
       "name": "slower_activation",
       "params": {
-        "k_in": 0.2
+        "rho_max": 0.2,
+        "mu_max": 0.4
       }
     }
   ]
