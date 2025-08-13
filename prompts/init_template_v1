@@ -1,4 +1,4 @@
-Task: From the sampled observations (possibly noisy, partially observed) and any input schedules, produce a SINGLE JSON object that fully specifies an rxode2-solvable model spec for simulation and parameter initialization. Your output will be used as the starting point for a numerical optimization. Your output MUST satisfy the schema and constraints below. Do not include explanations.
+Task: From the sampled observations (possibly noisy, partially observed) and any input schedules, produce a SINGLE JSON object that fully specifies an rxode2-solvable model spec for simulation and parameter initialization. Your output will be used as the starting point for a numerical optimization. Your output MUST satisfy the schema and constraints below. 
 
 DATA (read-only)
 -----------

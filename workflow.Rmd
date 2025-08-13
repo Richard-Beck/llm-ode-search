@@ -13,18 +13,19 @@ knitr::opts_knit$set(root.dir="~/projects/llm-ode-search/")
 ```{r}
 source("R/llm-ode-search.R")
 model <- "edelstein"
+LLM_ID <- "gpt-oss-120b"
 spec <- jsonlite::fromJSON(paste0("data/ground_truth_specs/",model,".json"), simplifyVector=FALSE)
 df_sam <- simulate_from_spec(spec)
 target_data_df <- df_sam %>%
   group_by(condition, time, variable, model) %>%
   summarise(value = mean(value), .groups = "drop")
-
-llmSearch(target_data_df,"tests/edelstein_gpt-oss-120b",LLM_ID = "gpt-oss-120b")
+outDir <- paste0("tests/",model,"_",LLM_ID)
+llmSearch(target_data_df,outDir,LLM_ID = LLM_ID)
 ```
 
 
 ```{r}
-model <- "edelstein"
+model <- "droop"
 
 spec <- jsonlite::fromJSON(paste0("data/ground_truth_specs/",model,".json"), simplifyVector=FALSE)
 df_sam <- simulate_from_spec(spec)
@@ -43,9 +44,11 @@ p <- ggplot(df,aes(x=time,y=value))+
 print(p)
 
 for(i in 0:5){
-  spec <- jsonlite::fromJSON(paste0("tests/edelstein_gpt-oss-120b/llm_proposals/prop_",i,".json"), simplifyVector=FALSE)
-df_tar <- read.csv("tests/edelstein_gpt-oss-120b/target_data.csv")
-fitted <- jsonlite::fromJSON(paste0("tests/edelstein_gpt-oss-120b/summaries/summary_",i,".json"), simplifyVector=FALSE)
+  spec <- jsonlite::fromJSON(paste0("tests/droop_gpt-oss-120b/llm_proposals/prop_",i,".json"), simplifyVector=FALSE)
+  spec$noise <- NULL
+  spec$replicates <- 1
+df_tar <- read.csv("tests/droop_gpt-oss-120b/target_data.csv")
+fitted <- jsonlite::fromJSON(paste0("tests/droop_gpt-oss-120b/summaries/summary_",i,".json"), simplifyVector=FALSE)
 opt_pars <- unlist(fitted$optimization_summary$optimized_parameters)
 
 spec <- modify_spec_parms(opt_pars,spec)

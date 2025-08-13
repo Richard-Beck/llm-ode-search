@@ -1,5 +1,7 @@
-llmSearch <- function(target_data,outDir,maxIter=5,LLM_ID = "qwen-3-coder-480b",inputs=list()){
-  
+llmSearch <- function(target_data,outDir,maxIter=5,LLM_ID = "qwen-3-coder-480b",inputs=list(),
+                      init_template_path = "prompts/init_template_v1",
+                      refine_template_path = "prompts/refine_template_v1"){
+  options(device.ask.default = FALSE)
   source("R/llm_caller.R")
   source("R/optimization.R")
   source("R/create_summary_object.R")
@@ -19,7 +21,7 @@ llmSearch <- function(target_data,outDir,maxIter=5,LLM_ID = "qwen-3-coder-480b",
   packet_json <- summarize_for_llm(target_data, spec_inputs = inputs)
   writeLines(packet_json, target_data_packet_path)
   
-  init_prompt <- compile_prompt("prompts/init_template_v1",
+  init_prompt <- compile_prompt(init_template_path,
                                 packet_json=packet_json,
                                 model_hints="",schema=schema)
   
@@ -34,7 +36,8 @@ llmSearch <- function(target_data,outDir,maxIter=5,LLM_ID = "qwen-3-coder-480b",
   
   
   spec <- jsonlite::fromJSON(outpath, simplifyVector=FALSE)
-  
+  spec$noise <- NULL
+  spec$replicates <- 1
   init_value <- optimize_model(spec,target_data,method="none")
   opt <- optimize_model(spec, target_data, method = "optim")
   spec_opt <- modify_spec_parms(opt$par,spec)
@@ -46,7 +49,7 @@ llmSearch <- function(target_data,outDir,maxIter=5,LLM_ID = "qwen-3-coder-480b",
   df_opt$id <- "opt"
   
   df <- rbind(df_ini,df_opt)
-  
+  print("summarizing...")
   model_summary <- create_summary_object(
     llm_spec = spec,
     opt_results = opt,
@@ -57,19 +60,27 @@ llmSearch <- function(target_data,outDir,maxIter=5,LLM_ID = "qwen-3-coder-480b",
   
   summary_output_path <- file.path(summary_path,"summary_0.json")
   save_summary_as_json(model_summary, summary_output_path)
-  
+  print("plotting...")
   plot_filepath <- file.path(plot_path,"fit_0.png")
+  lut <- names(spec$observe)  
+  names(lut) <- unlist(spec$observe)
+  df$variable[df$variable%in%names(lut)] <- lut[df$variable[df$variable%in%names(lut)]]
   p <- ggplot(df,aes(x=time,y=value))+
     facet_grid(cols=vars(condition),rows = vars(variable),scales="free")+
     geom_line(aes(color=id))+
-    geom_point(data=target_data,color="red")+
-    ggtitle(model)
+    geom_point(data=target_data,color="red")
   print(p)
   ggsave(plot_filepath,p)
   
   for(i in 1:maxIter){ 
-    model_summary_json <- read_file(summary_output_path) 
-    prompt <- compile_prompt("prompts/refine_template_v1",
+    print(paste0("iteration: ",i))
+    model_summary_json <- do.call(paste,lapply(0:(i-1),function(j){
+      summary_output_path <- file.path(summary_path,paste0("summary_",j,".json"))
+      model_summary_j <- read_file(summary_output_path)
+      paste0("\nPROPOSAL ATTEMPT #",j,"\n",model_summary_j)
+    }))
+    
+    prompt <- compile_prompt(refine_template_path,
                              packet_json=packet_json,
                              model_summary_json=model_summary_json,
                              model_hints="",schema=schema)
@@ -84,7 +95,8 @@ llmSearch <- function(target_data,outDir,maxIter=5,LLM_ID = "qwen-3-coder-480b",
       seed = 42)
     
     spec <- jsonlite::fromJSON(outpath, simplifyVector=FALSE)
-    
+    spec$noise <- NULL
+    spec$replicates <- 1
     init_value <- optimize_model(spec,target_data,method="none")
     opt <- optimize_model(spec, target_data, method = "optim")
     spec_opt <- modify_spec_parms(opt$par,spec)
@@ -109,11 +121,13 @@ llmSearch <- function(target_data,outDir,maxIter=5,LLM_ID = "qwen-3-coder-480b",
     save_summary_as_json(model_summary, summary_output_path)
     
     plot_filepath <- file.path(plot_path,paste0("fit_",i,".png"))
+    lut <- names(spec$observe)  
+    names(lut) <- unlist(spec$observe)
+    df$variable[df$variable%in%names(lut)] <- lut[df$variable[df$variable%in%names(lut)]]
     p <- ggplot(df,aes(x=time,y=value))+
       facet_grid(cols=vars(condition),rows = vars(variable),scales="free")+
       geom_line(aes(color=id))+
-      geom_point(data=target_data,color="red")+
-      ggtitle(model)
+      geom_point(data=target_data,color="red")
     print(p)
     ggsave(plot_filepath,p)
   }

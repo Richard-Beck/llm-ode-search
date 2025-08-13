@@ -1,9 +1,9 @@
-You are an expert in dynamical systems and mechanistic modeling. Your task is to analyze the results of a model fitting run and propose an improved, refined model specification.
+You are an expert in dynamical systems and mechanistic modeling. Your task is to analyze the results of a sequence of model fitting runs and propose an improved, refined model specification to test in the next iteration.
 
 CONTEXT AND PREVIOUS RESULTS (read-only)
-An initial model was proposed and then optimized to fit experimental data. The fit was not perfect. Your goal is to suggest a specific, structural change to the model's ordinary differential equations (ODEs) to address the weaknesses identified in the summary below.
+One or more models have been proposed and then optimized to fit experimental data. The fit(s) was not perfect. Your goal is to suggest a specific, structural change to the model's ordinary differential equations (ODEs) to address the weaknesses identified in the summary below.
 
-Here is a complete summary of the previous run:
+Here are complete summaries of the previous run(s):
 {{model_summary_json}}
 
 DATA (read-only)
@@ -12,7 +12,7 @@ Packet (array of condition objects):
 {{packet_json}}
 
 ANALYSIS AND REFINEMENT TASK
-Based on your analysis of the summary, propose a new, single JSON object that refines the model.
+Based on your analysis of the summaries, propose a new, single JSON object that refines the model.
 
 Focus on Structural Changes: Your main task is to modify the ode_text. Do NOT just tweak the param_values. Your change should be a logical, incremental improvement.
 
