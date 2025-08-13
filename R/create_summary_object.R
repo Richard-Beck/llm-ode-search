@@ -94,5 +94,4 @@ save_summary_as_json <- function(summary_obj, output_path) {
   # Write the JSON file
   json_output <- toJSON(summary_obj, auto_unbox = TRUE, pretty = TRUE, null = "null")
   writeLines(json_output, output_path)
-  message("✔ Saved model summary to: ", output_path)
 }

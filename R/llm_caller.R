@@ -40,7 +40,8 @@ compile_prompt <- function(template_path, ...) {
   rendered_prompt <- glue(
     template_string,
     .open = "{{",
-    .close = "}}"
+    .close = "}}",
+    .envir = list2env(provided_args, new.env(parent = emptyenv()))
   )
   
   return(as.character(rendered_prompt))
@@ -120,13 +121,41 @@ call_llm <- function(user_prompt,
       "Authorization" = paste("Bearer", api_key),
       "Content-Type" = "application/json"
     ) |>
-    req_body_json(body, auto_unbox = TRUE)
+    req_body_json(body, auto_unbox = TRUE)|>
+    req_retry(max_tries = retries) 
+
+    resp <- tryCatch({
+      # 1. Attempt to perform the request
+      req_perform(req)
+      
+    }, httr2_http = function(e) {
+      # 2. This code runs ONLY if an httr2_http error occurs
+      
+      # Extract the server's response body from the error object
+      error_body_text <- resp_body_string(e$resp)
+      
+      # Format the log message
+      log_message <- paste0(
+        "--- API Request Failed: ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), " ---\n",
+        "Status: ", resp_status(e$resp), " ", resp_status_desc(e$resp), "\n",
+        "\n--- Request Body Sent ---\n",
+        toJSON(body, auto_unbox = TRUE, pretty = TRUE), "\n",
+        "\n--- Server Response Body ---\n",
+        error_body_text, "\n",
+        "--------------------------------------------------\n\n"
+      )
+      
+      # Write the detailed message to the log file
+      cat(log_message, file = "log.txt", append = TRUE)
+      
+      # 3. Re-throw the original error to stop the script,
+      # ensuring the failure is not silently ignored.
+      stop(e)
+    })
   
-  resp <- req |>
-    req_retry(max_tries = retries) |>
-    req_perform()
-  
-  resp_check_status(resp)
+  # This part of the code will only be reached if the request is successful
+  resp_check_status(resp) # This is now redundant but safe to keep
+  cat("Request successful!\n")
   
   # Process the response
   res <- resp_body_json(resp, simplifyVector = FALSE)

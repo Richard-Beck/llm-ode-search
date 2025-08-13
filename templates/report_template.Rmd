@@ -1,0 +1,135 @@
+---
+title: "Model Run Report"
+output: html_document
+params:
+  summary_data: NULL
+  plot_path: ""
+---
+
+
+
+``` {r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+knitr::opts_knit$set(root.dir = '..')
+library(jsonlite)
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Extract key information from the passed-in R object
+model_name <- params$summary_data$initial_proposal$model$name
+optimization_summary <- params$summary_data$optimization_summary
+fit_quality <- as.data.frame(do.call(rbind, params$summary_data$fit_quality))
+```
+
+<style>
+  body {
+    font-family: sans-serif;
+  }
+  .section {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+  .section h2 {
+    margin-top: 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+  th {
+    background-color: #f2f2f2;
+  }
+</style>
+
+<div class="section">
+## Model Overview
+
+* **Model Name:** `r model_name`
+* **Run ID:** `r params$summary_data$initial_proposal$model$name`
+* **Status:** `r optimization_summary$convergence_message`
+</div>
+
+<div class="section">
+## Model Specification
+
+### Ordinary Differential Equations (ODEs)
+
+``` {r}
+# Nicely format the ODE text
+ode_text <- params$summary_data$initial_proposal$model$ode_text
+cat(paste0("<pre><code>", ode_text, "</code></pre>"))
+```
+
+### Model States
+
+* `r paste(params$summary_data$initial_proposal$model$states, collapse = ", ")`
+
+### Model Parameters
+
+* **Global Parameters:** `r paste(names(params$summary_data$initial_proposal$param_values), collapse = ", ")`
+* **Condition-Specific Parameters:**
+``` {r}
+conditions <- params$summary_data$initial_proposal$conditions
+for (cond in conditions) {
+  if (!is.null(cond$params) && length(cond$params) > 0) {
+    cat(paste0("  * **", cond$name, ":** ", paste(names(cond$params), collapse = ", "), "\n"))
+  }
+}
+```
+</div>
+
+<div class="section">
+## Fit Quality
+
+### Fit Comparison Plot
+
+``` {r, out.width="100%"}
+if (file.exists(plot_path)) {
+  img <- png::readPNG(plot_path)
+  grid::grid.raster(img)
+} else {
+  cat("Plot not found at:", plot_path)
+}
+```
+
+### Fit Quality Metrics
+
+``` {r}
+kable(fit_quality, caption = "Fit Quality Metrics")
+```
+</div>
+
+<div class="section">
+## Optimization Summary
+
+### Convergence
+
+* **Code:** `r optimization_summary$convergence_code`
+* **Message:** `r optimization_summary$convergence_message`
+
+### Objective Function
+
+* **Initial Value:** `r optimization_summary$initial_objective_value`
+* **Final Value:** `r optimization_summary$final_objective_value`
+* **Improvement Ratio:** `r optimization_summary$improvement_ratio`
+
+### Optimized Parameters
+
+``` {r}
+# Convert optimized parameters to a data frame for better display
+optimized_params_df <- data.frame(
+  Parameter = names(optimization_summary$optimized_parameters),
+  Value = unlist(optimization_summary$optimized_parameters)
+)
+kable(optimized_params_df, caption = "Optimized Parameters")
+```
+</div>

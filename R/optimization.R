@@ -105,7 +105,8 @@ objective_function <- function(params_vec, compiled_model_obj, spec, data) {
   }
   
   sse <- sum((comparison_df$value_target - comparison_df$value_model)^2, na.rm = TRUE)
-  print(sse)
+  #print(sse)
+  if(!is.finite(sse)) sse <- 1e10
   return(sse)
 }
 
