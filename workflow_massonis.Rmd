@@ -1,0 +1,280 @@
+---
+title: "workflow"
+author: "RJB"
+date: "2025-08-12"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir="~/projects/llm-ode-search/")
+```
+
+
+```{r}
+target_data <- read.csv("data/ground_truth_raw/GT_Microbial_train10pct.csv")
+outDir <- "tests/microbial_qwen-3-235b-a22b-thinking-2507"
+LLM_ID <- "qwen-3-235b-a22b-thinking-2507"
+
+llmSearchMassonis(target_data,outDir,LLM_ID=LLM_ID,maxIter = 10)
+```
+
+```{r}
+target_data <- read.csv("data/ground_truth_raw/GT_Microbial_train10pct.csv")
+outDir <- "tests/microbial_qwen-3-coder-480b"
+LLM_ID <- "qwen-3-coder-480b"
+
+llmSearchMassonis(target_data,outDir,LLM_ID=LLM_ID,maxIter = 10)
+```
+
+```{r}
+target_data <- read.csv("data/ground_truth_raw/GT_Bacterial_train10pct.csv")
+outDir <- "tests/bacterial_qwen-3-coder-480b"
+LLM_ID <- "qwen-3-coder-480b"
+
+llmSearchMassonis(target_data,outDir,LLM_ID=LLM_ID,maxIter = 10)
+```
+
+```{r}
+target_data <- read.csv("data/ground_truth_raw/GT_Bacterial_train10pct.csv")
+outDir <- "tests/bacterial_gpt-oss-120b"
+LLM_ID <- "gpt-oss-120b"
+
+llmSearchMassonis(target_data,outDir,LLM_ID=LLM_ID,maxIter = 10)
+```
+
+
+
+```{r}
+gt_dir <- "data/ground_truth_raw"
+x_list <- list.files(gt_dir)
+x_list <- x_list[grepl("10pct",x_list)]
+
+json_packets <- lapply(x_list,function(xi){
+  x <- read.csv(file.path(gt_dir,xi))
+  smm <- summarize_for_llm_agg(x)
+  
+})
+names(json_packets) <- gsub(".csv","",x_list)
+
+init_template_path <- "prompts/init_template_v1"
+model_hints <- "model is fully identifiable (no hidden states). Model has no hidden external input (no forcing function)."
+schema <- read_file("prompts/json_rules")
+LLM_ID <- "gpt-oss-120b"
+for(id in names(json_packets)){
+ init_prompt <- compile_prompt(init_template_path,
+                                packet_json=json_packets[[id]],
+                                model_hints=model_hints,schema=schema)
+  
+  outpath <- paste0("tests/massonis/init/",id,".json")
+  dir.create(dirname(outpath), showWarnings = FALSE, recursive = TRUE)
+  llm_result <- call_llm(
+    user_prompt = init_prompt,
+    out_path = outpath,
+    model = LLM_ID,
+    temperature = 0.1,
+    seed = 42) 
+}
+
+```
+```{r}
+## ---- ground-truth models for score_candidate_fit() -----------------------
+
+# Small helper to package a candidate
+mk_cand <- function(states, params, deriv_fun) {
+  list(states = states, param_names = params, deriv = deriv_fun)
+}
+
+# ---------------- Lorenz (3-state) ----------------
+lorenz_deriv <- function(x, theta) {
+  with(as.list(c(x, theta)),
+       base::c(
+         x1 = a * (x2 - x1),
+         x2 = x1 * (b - x3) - x2,
+         x3 = x1 * x2 - c * x3
+       ))
+}
+lorenz_cand  <- mk_cand(c("x1","x2","x3"), c("a","b","c"), lorenz_deriv)
+lorenz_theta <- c(a = 10, b = 28, c = 8/3)
+
+# ---------------- Immunity (2-state) ----------------
+immunity_deriv <- function(x, theta) {
+  with(as.list(c(x, theta)), {
+    dx1 <- a*(1 - x1/k)*x1 - e*x1*x2 - (beta*gamma*x1*x2^2)/(gamma*x2 + alpha*x1)
+    dx2 <- S + d*x1 - delta*x2
+    base::c(x1 = dx1, x2 = dx2)
+  })
+}
+immunity_cand  <- mk_cand(c("x1","x2"),
+                          c("a","k","e","beta","gamma","alpha","S","d","delta"),
+                          immunity_deriv)
+immunity_theta <- c(a=0.18, k=60, e=0.005, beta=0.013, gamma=0.02, alpha=0.01,
+                    S=1.1, d=0.001, delta=0.105)
+
+# ---------------- Bacterial (2-state) ----------------
+bacterial_deriv <- function(x, theta) {
+  with(as.list(c(x, theta)), {
+    dx1 <- a1 + (a2*x1^2)/(a3 + x1^2) - x1/(1 + x1 + x2)
+    dx2 <- b1/(1 + b2*x1^5) - x2/(1 + x1 + x2)
+    base::c(x1 = dx1, x2 = dx2)
+  })
+}
+bacterial_cand  <- mk_cand(c("x1","x2"), c("a1","a2","a3","b1","b2"), bacterial_deriv)
+bacterial_theta <- c(a1=0.004, a2=0.07, a3=0.04, b1=0.82, b2=1854.5)
+
+# ---------------- Microbial (2-state) ----------------
+microbial_deriv <- function(x, theta) {
+  with(as.list(c(x, theta)), {
+    dx1 <- (mu*x2*x1)/(Ks + x2) - Kd*x1
+    dx2 <- -(mu*x2*x1)/(gamma*(Ks + x2))
+    base::c(x1 = dx1, x2 = dx2)
+  })
+}
+microbial_cand  <- mk_cand(c("x1","x2"), c("Kd","Ks","mu","gamma"), microbial_deriv)
+microbial_theta <- c(Kd=0.05, Ks=1, mu=0.4, gamma=0.5)
+
+# ---------------- Crypt (3-state) ----------------
+crypt_deriv <- function(x, theta) {
+  with(as.list(c(x, theta)), {
+    dx1 <- (a3 - a1 - a2)*x1 - (k0*x1^2)/(1 + m0*x1)
+    dx2 <- (b3 - b1 - b2)*x2 + a2*x1 - (k1*x2^2)/(1 + m1*x2) + (k0*x1^2)/(1 + m0*x1)
+    dx3 <- -g*x3 + b2*x2 + (k1*x2^2)/(1 + m1*x2)
+    base::c(x1 = dx1, x2 = dx2, x3 = dx3)
+  })
+}
+crypt_cand  <- mk_cand(c("x1","x2","x3"),
+                       c("a1","a2","a3","b1","b2","b3","g","k0","k1","m0","m1"),
+                       crypt_deriv)
+crypt_theta <- c(a1=0.1, a2=0.3, a3=0.69, b1=0.1, b2=0.3, b3=0.397, g=0.139,
+                 k0=0.1, k1=3e-4, m0=0.1, m1=4e-4)
+
+# ---------------- Glycolysis (7-state) ----------------
+glycolysis_deriv <- function(x, theta) {
+  with(as.list(c(x, theta)), {
+    dx1 <- c1 + (c2*x1*x6)/(1 + c3*x6^4)
+    dx2 <- (d1*x1*x6)/(1 + d2*x6^4) + d3*x2 - d4*x2*x7
+    dx3 <- e1*x2 + e2*x3 + e3*x2*x7 + e4*x3*x6
+    dx4 <- f1*x3 + e2*x4 + f3*x5 + f4*x3*x6 + f5*x4*x7
+    dx5 <- g1*x4 + g2*x5
+    dx6 <- h3*x3 + h5*x6 + h4*x3*x6 + (h1*x1*x6)/(1 + h2*x6^4)
+    dx7 <- j1*x2 + j2*x2*x7 + j3*x4*x7
+    base::c(x1=dx1, x2=dx2, x3=dx3, x4=dx4, x5=dx5, x6=dx6, x7=dx7)
+  })
+}
+glycolysis_cand  <- mk_cand(
+  states = paste0("x", 1:7),
+  params = c("c1","c2","c3","d1","d2","d3","d4","e1","e2","e3","e4",
+             "f1","f2","f3","f4","f5","g1","g2","h1","h2","h3","h4","h5",
+             "j1","j2","j3"),
+  deriv_fun = glycolysis_deriv
+)
+glycolysis_theta <- c(
+  c1=2.5, c2=-100, c3=13.6769, d1=200, d2=13.6769, d3=-6, d4=-6,
+  e1=6, e2=-64, e3=6, e4=16, f1=64, f2=-13, f3=13, f4=-16, f5=-100,
+  g1=1.3, g2=3.1, h1=-200, h2=13.6769, h3=128, h4=-32, h5=-32/25,
+  j1=6, j2=-18, j3=-100
+)
+
+# ---------------- Assemble gt_list with keys matching file/JSON ids --------
+gt_list <- list()
+add_case <- function(case, cand, theta) {
+  for (suf in c("_all","_train10pct","_ICSpp")) {
+    gt_list[[paste0("GT_", case, suf)]] <<- list(model = cand, theta = theta)
+  }
+}
+add_case("Lorenz",    lorenz_cand,    lorenz_theta)
+add_case("Immunity",  immunity_cand,  immunity_theta)
+add_case("Bacterial", bacterial_cand, bacterial_theta)
+add_case("Microbial", microbial_cand, microbial_theta)
+add_case("Crypt",     crypt_cand,     crypt_theta)
+add_case("Glycolysis",glycolysis_cand,glycolysis_theta)
+
+# Optional quick sanity check:
+# names(gt_list)
+# str(gt_list[["GT_Bacterial_train10pct"]])
+
+```
+
+```{r}
+
+gt_dir <- "data/ground_truth_raw"
+x_list <- list.files(gt_dir)
+x_list <- x_list[grepl("10pct",x_list)]
+
+json_packets <- lapply(x_list,function(xi){
+  x <- read.csv(file.path(gt_dir,xi))
+  smm <- summarize_for_llm_agg(x)
+  
+})
+names(json_packets) <- gsub(".csv","",x_list)
+
+model_hints <- "model is fully identifiable (no hidden states). Model has no hidden external input (forcing function)."
+schema <- read_file("prompts/json_rules")
+LLM_ID <- "gpt-oss-120b"
+for(id in names(json_packets)){
+  spec <- jsonlite::fromJSON(paste0("tests/massonis/init/",id,".json"))
+  cand <- llm_json_to_candidate(spec)
+  theta0 <- theta0_from_llm(spec)
+  csv <- paste0("data/ground_truth_raw/",id,".csv")
+  res <- tryCatch(score_candidate_fit(csv, cand, theta0, spar=NULL, scale="sd"),
+                   error=function(e) {
+                     print(id)
+                     return(NULL)
+                   })
+  print(res$optim_results$value)
+  next
+  if(is.null(res)) next
+  prompt <- compile_prompt("prompts/refine_template_v1",
+                           packet_json=json_packets[[id]],
+                           model_summary_json=res_to_string(res),
+                           model_hints=model_hints,schema=schema)
+  outpath <- paste0("tests/massonis/ref/",id,".json")
+  dir.create(dirname(outpath), showWarnings = FALSE, recursive = TRUE)
+  llm_result <- call_llm(
+    user_prompt = prompt,
+    out_path = outpath,
+    model = LLM_ID,
+    temperature = 0.1,
+    seed = 42) 
+}
+
+```
+```{r}
+ids <- list.files("tests/massonis/ref/")
+ids <- gsub(".json","",ids)
+for(id in ids){
+  spec <- jsonlite::fromJSON(paste0("tests/massonis/ref/",id,".json"))
+  cand <- llm_json_to_candidate(spec)
+  theta0 <- theta0_from_llm(spec)
+  csv <- paste0("data/ground_truth_raw/",id,".csv")
+  res <- tryCatch(score_candidate_fit(csv, cand, theta0, spar=NULL, scale="sd"),
+                   error=function(e) {
+                     print(id)
+                     return(NULL)
+                   })
+  if(is.null(res)) next
+  print(res$optim_results$value)
+  prompt <- compile_prompt("prompts/refine_template_v1",
+                           packet_json=json_packets[[id]],
+                           model_summary_json=res_to_string(res),
+                           model_hints=model_hints,schema=schema)
+  outpath <- paste0("tests/massonis/ref2/",id,".json")
+  dir.create(dirname(outpath), showWarnings = FALSE, recursive = TRUE)
+  llm_result <- call_llm(
+    user_prompt = prompt,
+    out_path = outpath,
+    model = LLM_ID,
+    temperature = 0.1,
+    seed = 42) 
+}
+```
+
+
+
+
+
+
+
+
