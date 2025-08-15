@@ -1,0 +1,36 @@
+SCHEMA (required keys and types)
+-----------
+[
+  {
+    "model_name": "Linear Model with Cross-Inhibition",
+    "justification": "A simple linear model based on the report's correlation analysis, where each state has a constant production and is inhibited by the other state.",
+    "states": ["x1", "x2"],
+    "param_names": ["p1", "p2", "k1", "k2"],
+    "param_bounds": {
+      "upper": { "p1": 10, "p2": 10, "k1": 50, "k2": 50 },
+      "lower": { "p1": 0, "p2": 0, "k1": 0, "k2": 0 }
+    },
+    "deriv_R_function_body": "## The body of the R function, as a single string.\nx1 <- x[['x1']]; x2 <- x[['x2']]\np1 <- theta[['p1']]; p2 <- theta[['p2']]\nk1 <- theta[['k1']]; k2 <- theta[['k2']]\n\ndx1 <- p1 - k1*x2\ndx2 <- p2 - k2*x1\n\nc(x1 = dx1, x2 = dx2) ## Must return a named vector."
+  },
+  {
+    "model_name": "Non-linear Model with Interaction",
+    "justification": "This model tests for a non-linear interaction term, as suggested by the feature importance scores, while keeping the decay terms linear.",
+    "states": ["x1", "x2"],
+    "param_names": ["a1", "a2", "k1", "k2", "k3"],
+    "param_bounds": {
+      "upper": { "a1": 10, "a2": 10, "k1": 50, "k2": 50, "k3": 100 },
+      "lower": { "a1": 0, "a2": 0, "k1": 0, "k2": 0, "k3": 0 }
+    },
+    "deriv_R_function_body": "x1 <- x[['x1']]; x2 <- x[['x2']]\na1 <- theta[['a1']]; a2 <- theta[['a2']]\nk1 <- theta[['k1']]; k2 <- theta[['k2']]; k3 <- theta[['k3']]\n\ndx1 <- a1 - k1*x1 - k3*x1*x2\ndx2 <- a2 - k2*x2\n\nc(x1 = dx1, x2 = dx2)"
+  }
+]
+-----------
+Rules and Details
+
+model_name: Must be a brief, descriptive string.
+
+justification: Must be 2-3 sentences explaining the modeling choices by referencing the discovery report.
+
+param_bounds: Provide plausible, non-infinite upper and lower bounds for each parameter. Rate constants should generally be non-negative.
+
+deriv_R_function_body: This field is critical. It must be a single string containing only the R code that would go inside a function. Do not include the function(x, theta) { ... } wrapper. The code must be valid R syntax. The final line of the code must be a call to c() that returns a named vector of the derivatives, with names matching the states.

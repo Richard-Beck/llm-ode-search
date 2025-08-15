@@ -1,268 +1,102 @@
-llmSearch <- function(target_data,outDir,maxIter=5,LLM_ID = "qwen-3-coder-480b",inputs=list(),
-                      init_template_path = "prompts/init_template_v1",
-                      refine_template_path = "prompts/refine_template_v1",model_hints=""){
-  options(device.ask.default = FALSE)
-  source("R/llm_caller.R")
-  source("R/optimization.R")
-  source("R/create_summary_object.R")
-  
-  schema <- read_file("prompts/json_rules")
-  
-  dir.create(outDir, showWarnings = FALSE, recursive = TRUE)
-  
-  target_data_path <- file.path(outDir,"target_data.csv")
-  target_data_packet_path <- file.path(outDir,"target_data_packet.json")
-  
-  llm_proposal_path <- file.path(outDir,"llm_proposals")
-  summary_path <- file.path(outDir,"summaries")
-  plot_path <- file.path(outDir,"plots")
-  
-  write_csv(target_data,target_data_path)
-  packet_json <- summarize_for_llm(target_data, spec_inputs = inputs)
-  writeLines(packet_json, target_data_packet_path)
-  
-  init_prompt <- compile_prompt(init_template_path,
-                                packet_json=packet_json,
-                                model_hints=model_hints,schema=schema)
-  
-  outpath <- file.path(llm_proposal_path,"prop_0.json")
-  dir.create(dirname(outpath), showWarnings = FALSE, recursive = TRUE)
-  llm_result <- call_llm(
-    user_prompt = init_prompt,
-    out_path = outpath,
-    model = LLM_ID,
-    temperature = 0.1,
-    seed = 42)
-  
-  
-  spec <- jsonlite::fromJSON(outpath, simplifyVector=FALSE)
-  spec$noise <- NULL
-  spec$replicates <- 1
-  init_value <- optimize_model(spec,target_data,method="none")
-  opt <- optimize_model(spec, target_data, method = "optim")
-  spec_opt <- modify_spec_parms(opt$par,spec)
-  
-  df_ini <- simulate_from_spec(make_spec_transparent(spec))
-  df_opt <- simulate_from_spec(make_spec_transparent(spec_opt))
-  
-  df_ini$id <- "init"
-  df_opt$id <- "opt"
-  
-  df <- rbind(df_ini,df_opt)
-  print("summarizing...")
-  model_summary <- create_summary_object(
-    llm_spec = spec,
-    opt_results = opt,
-    initial_objective_value = init_value,
-    target_data_df = target_data,
-    optimized_fit_df = df_opt
-  )
-  
-  summary_output_path <- file.path(summary_path,"summary_0.json")
-  save_summary_as_json(model_summary, summary_output_path)
-  print("plotting...")
-  plot_filepath <- file.path(plot_path,"fit_0.png")
-  lut <- names(spec$observe)  
-  names(lut) <- unlist(spec$observe)
-  df$variable[df$variable%in%names(lut)] <- lut[df$variable[df$variable%in%names(lut)]]
-  p <- ggplot(df,aes(x=time,y=value))+
-    facet_grid(cols=vars(condition),rows = vars(variable),scales="free")+
-    geom_line(aes(color=id))+
-    geom_point(data=target_data,color="red")
-  print(p)
-  ggsave(plot_filepath,p)
-  
-  for(i in 1:maxIter){ 
-    print(paste0("iteration: ",i))
-    model_summary_json <- do.call(paste,lapply(0:(i-1),function(j){
-      summary_output_path <- file.path(summary_path,paste0("summary_",j,".json"))
-      model_summary_j <- read_file(summary_output_path)
-      paste0("\nPROPOSAL ATTEMPT #",j,"\n",model_summary_j)
-    }))
-    
-    prompt <- compile_prompt(refine_template_path,
-                             packet_json=packet_json,
-                             model_summary_json=model_summary_json,
-                             model_hints=model_hints,schema=schema)
-    
-    outpath <- file.path(llm_proposal_path,paste0("prop_",i,".json"))
-    dir.create(dirname(outpath), showWarnings = FALSE, recursive = TRUE)
-    llm_result <- call_llm(
-      user_prompt = prompt,
-      out_path = outpath,
-      model = LLM_ID,
-      temperature = 0.1,
-      seed = 42)
-    
-    spec <- jsonlite::fromJSON(outpath, simplifyVector=FALSE)
-    spec$noise <- NULL
-    spec$replicates <- 1
-    init_value <- optimize_model(spec,target_data,method="none")
-    opt <- optimize_model(spec, target_data, method = "optim")
-    spec_opt <- modify_spec_parms(opt$par,spec)
-    
-    df_ini <- simulate_from_spec(make_spec_transparent(spec))
-    df_opt <- simulate_from_spec(make_spec_transparent(spec_opt))
-    
-    df_ini$id <- "init"
-    df_opt$id <- "opt"
-    
-    df <- rbind(df_ini,df_opt)
-    
-    model_summary <- create_summary_object(
-      llm_spec = spec,
-      opt_results = opt,
-      initial_objective_value = init_value,
-      target_data_df = target_data,
-      optimized_fit_df = df_opt
-    )
-    
-    summary_output_path <- file.path(summary_path,paste0("summary_",i,".json"))
-    save_summary_as_json(model_summary, summary_output_path)
-    
-    plot_filepath <- file.path(plot_path,paste0("fit_",i,".png"))
-    lut <- names(spec$observe)  
-    names(lut) <- unlist(spec$observe)
-    df$variable[df$variable%in%names(lut)] <- lut[df$variable[df$variable%in%names(lut)]]
-    p <- ggplot(df,aes(x=time,y=value))+
-      facet_grid(cols=vars(condition),rows = vars(variable),scales="free")+
-      geom_line(aes(color=id))+
-      geom_point(data=target_data,color="red")
-    print(p)
-    ggsave(plot_filepath,p)
-  }
-  
-  
-}
+library(glue)
+library(jsonlite)
+library(readr)
 
-
-llmSearchMassonis <- function(target_data,outDir,maxIter=5,LLM_ID = "qwen-3-coder-480b",inputs=list(),
-                      init_template_path = "prompts/init_template_v1",
-                      refine_template_path = "prompts/refine_template_v1",model_hints="model is fully identifiable (no hidden states). Use only the states and state names observed in the data! Model has no hidden external input (no forcing function)."){
-  options(device.ask.default = FALSE)
-  source("R/llm_caller.R")
-  source("R/massonis_utils.R")
-  #source("R/create_summary_object.R")
+run_llm_ode_search <- function(xdx,outDir, LLM_ID, max_iter = 10) {
   
-  schema <- read_file("prompts/json_rules")
+  # --- 1. Setup and Initialization ---
+  dir.create(outDir, recursive = TRUE, showWarnings = FALSE)
+  sapply(c("prompts", "responses", "models", "opt"), function(d) {
+    dir.create(file.path(outDir, d), showWarnings = FALSE)
+  })
   
-  dir.create(outDir, showWarnings = FALSE, recursive = TRUE)
+  source("R/llm_report_gen.R")
+  source("R/api_utils.R")
+  source("R/optim_utils.R") # Added as requested
   
-  target_data_path <- file.path(outDir,"target_data.csv")
-  target_data_packet_path <- file.path(outDir,"target_data_packet.json")
-  
-  llm_proposal_path <- file.path(outDir,"llm_proposals")
-  summary_path <- file.path(outDir,"summaries")
-  dir.create(summary_path, showWarnings = FALSE, recursive = TRUE)
-  plot_path <- file.path(outDir,"plots")
-  
-  write_csv(target_data,target_data_path)
-  packet_json <- summarize_for_llm_agg(target_data)
-  writeLines(packet_json, target_data_packet_path)
-  
-  init_prompt <- compile_prompt(init_template_path,
-                                packet_json=packet_json,
-                                model_hints=model_hints,schema=schema)
-  
-  outpath <- file.path(llm_proposal_path,"prop_0.json")
-  dir.create(dirname(outpath), showWarnings = FALSE, recursive = TRUE)
-  llm_result <- call_llm(
-    user_prompt = init_prompt,
-    out_path = outpath,
-    model = LLM_ID,
-    temperature = 0.1,
-    seed = 42)
-  
-  
-  raw_output <- readr::read_file(outpath)
-  if (stringr::str_detect(raw_output, "</think>")) {
-    # The new format is present; strip the reasoning and extract the JSON
-    message("Detected new output format. Stripping reasoning and parsing JSON...")
-    
-    json_string <- stringr::str_extract(raw_output, "(?s)</think>\\s*(.*)") |>
-      stringr::str_remove("(?s)</think>\\s*")
-    
-    spec <- jsonlite::fromJSON(json_string)
-    
-  } else {
-    # The old format is present; try to load the file directly as JSON
-    message("New format not detected. Attempting to parse the entire file as JSON...")
-    
-    # This is your original code
-    spec <- jsonlite::fromJSON(outpath)
-    
-  }
-  spec$noise <- NULL
-  spec$replicates <- 1
-  
-  cand <- llm_json_to_candidate(spec)
-  theta0 <- theta0_from_llm(spec)
-  res <- score_candidate_fit(target_data_path, cand, theta0, spar=NULL, scale="sd")
-  print(res$optim_results)
-  res$prior_spec <- spec
-  
-  model_summary <- res_to_string(res)
-  
-  summary_output_path <- file.path(summary_path,"summary_0.txt")
-  write_file(model_summary,summary_output_path)
-  
-  
-  for(i in 1:maxIter){ 
-    print(paste0("iteration: ",i))
-    model_summary <- do.call(paste,lapply(0:(i-1),function(j){
-      summary_output_path <- file.path(summary_path,paste0("summary_",j,".txt"))
-      model_summary_j <- read_file(summary_output_path)
-      paste0("\nPROPOSAL ATTEMPT #",j,"\n",model_summary_j)
-    }))
-    
-    prompt <- compile_prompt(refine_template_path,
-                             packet_json=packet_json,
-                             model_summary_json=model_summary,
-                             model_hints=model_hints,schema=schema)
-    
-    outpath <- file.path(llm_proposal_path,paste0("prop_",i,".json"))
-    llm_result <- call_llm(
-      user_prompt = prompt,
-      out_path = outpath,
-      model = LLM_ID,
-      temperature = 0.1,
-      seed = 42)
-    
-    raw_output <- readr::read_file(outpath)
-    if (stringr::str_detect(raw_output, "</think>")) {
-      # The new format is present; strip the reasoning and extract the JSON
-      message("Detected new output format. Stripping reasoning and parsing JSON...")
-      
-      json_string <- stringr::str_extract(raw_output, "(?s)</think>\\s*(.*)") |>
-        stringr::str_remove("(?s)</think>\\s*")
-      
-      spec <- jsonlite::fromJSON(json_string)
-      
-    } else {
-      # The old format is present; try to load the file directly as JSON
-      message("New format not detected. Attempting to parse the entire file as JSON...")
-      
-      # This is your original code
-      spec <- jsonlite::fromJSON(outpath)
-      
+  # --- 2. Inner Function to Optimize a Set of Models ---
+  optimize_from_specs <- function(model_specs, iter_num) {
+    process_llm_model <- function(model_spec) {
+      full_body_string <- paste0("{", model_spec$deriv_R_function_body, "}")
+      deriv_function <- function(x, theta) {}
+      body(deriv_function) <- parse(text = full_body_string)
+      list(
+        model_name = model_spec$model_name,
+        justification = model_spec$justification,
+        states = unlist(model_spec$states),
+        param_names = unlist(model_spec$param_names),
+        lower = unlist(model_spec$param_bounds$lower),
+        upper = unlist(model_spec$param_bounds$upper),
+        deriv = deriv_function
+      )
     }
-    spec$noise <- NULL
-    spec$replicates <- 1
     
-    cand <- llm_json_to_candidate(spec)
-    theta0 <- theta0_from_llm(spec)
-    res <- score_candidate_fit(target_data_path, cand, theta0, spar=NULL, scale="sd")
-    print(res$optim_results)
+    models <- lapply(model_specs, process_llm_model)
+    saveRDS(models, file.path(outDir, "models", sprintf("models_%d.Rds", iter_num)))
     
-    res$prior_spec <- spec
+    optim_wrapper <- function(model) {
+      p0 <- runif(length(model$lower), min = model$lower, max = model$upper)
+      names(p0) <- model$param_names
+      upper <- model$upper
+      lower <- model$lower
+      # Assumes optim_deriv returns a list containing at least $opt and $dX_hat
+      optim_deriv(upper,lower, model, xdx$X, xdx$dX) 
+    }
     
-    model_summary <- res_to_string(res)
+    opt_list <- lapply(models, optim_wrapper)
+    saveRDS(opt_list, file.path(outDir, "opt", sprintf("opt_%d.Rds", iter_num)))
     
+    err <- sapply(opt_list, function(o) o$opt$value)
+    best_idx <- which.min(err)
     
-    summary_output_path <- file.path(summary_path,paste0("summary_",i,".txt"))
-    write_file(model_summary,summary_output_path)
-    
+    list(
+      opt = opt_list[[best_idx]],
+      model = models[[best_idx]],
+      spec = toJSON(model_specs[[best_idx]], auto_unbox = TRUE, pretty = TRUE)
+    )
   }
   
+  # --- 3. Initial Model Generation (Iter 0) ---
+  discovery_report <- generate_llm_discovery_report(xdx$dX, xdx$X)
+  init_template <- read_file("prompts/grad_prompts/init_template")
+  schema <- read_file("prompts/grad_prompts/json_rules")
+  model_hints <- ""
   
+  prompt <- glue(init_template, .open = "{{", .close = "}}")
+  writeLines(prompt, file.path(outDir, "prompts", "prompt_0.txt"))
+  
+  resp <- call_llm(prompt, model = LLM_ID, temperature = 0.1)
+  writeLines(resp, file.path(outDir, "responses", "resp_0.json"))
+  
+  model_specs <- fromJSON(resp, simplifyVector = FALSE)
+  best_result <- optimize_from_specs(model_specs, 0)
+  
+  # --- 4. Refinement Loop ---
+  if (max_iter > 0) {
+    for (i in 1:max_iter) {
+      cat(sprintf("\n--- Starting Refinement Iteration %d ---\n", i))
+      
+      # Correctly access nested elements based on your template's logic
+      opt <- best_result$opt
+      model <- best_result$model
+      spec <- best_result$spec
+      
+      diagnostic_report <- generate_llm_diagnostic_report(xdx$dX, opt$dX_hat, xdx$X)
+      opt_smm <- toJSON(opt$opt, auto_unbox = TRUE)
+      
+      refine_template <- read_file("prompts/grad_prompts/refine_template")
+      prompt <- glue(refine_template, .open = "{{", .close = "}}")
+      writeLines(prompt, file.path(outDir, "prompts", sprintf("prompt_%d.txt", i)))
+      
+      resp <- call_llm(prompt, model = LLM_ID, temperature = 0.1)
+      writeLines(resp, file.path(outDir, "responses", sprintf("resp_%d.json", i)))
+      
+      model_specs <- fromJSON(resp, simplifyVector = FALSE)
+      best_result <- optimize_from_specs(model_specs, i)
+    }
+  }
+  
+  # --- 5. Return the final best result ---
+  cat("\n--- Workflow Complete ---\n")
+  return(best_result)
 }

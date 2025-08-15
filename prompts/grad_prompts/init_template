@@ -1,0 +1,20 @@
+Task: Based on the data summary provided in the DATA REPORT, provide 3-5 candidate models to describe the data which can be used as starting points for simulation, optimization, and further model refinement. Your output will be used as the starting point for a numerical optimization. Your output MUST satisfy the schema and constraints below. 
+
+DATA REPORT (read-only):
+-----------
+{{discovery_report}}
+
+Optional prior/model menu (free text hints; you may ignore if unhelpful):
+{{model_hints}}
+
+MODEL SCHEMA:
+{{schema}}
+
+DERIVATION HINTS (non-binding)
+-----------
+- Think hard about the relationships presented in the DATA REPORT to choose plausible model structures and initial guesses.
+- Keep complexity low–moderate (1–4 states, 4–10 parameters). Favor identifiable forms.
+
+OUTPUT
+-----------
+Return ONLY the JSON object. No prose.

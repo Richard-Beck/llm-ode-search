@@ -1,0 +1,30 @@
+You are an expert in dynamical systems and mechanistic modeling. Your task is to analyze the results of a model fitting run and propose a set of improved, refined model specification to test in the next iteration.
+
+CONTEXT AND PREVIOUS RESULTS (read-only)
+A model has been proposed and then optimized to fit experimental data. The fit was not perfect. Your goal is to suggest specific, structural changes to the model's ordinary differential equations (ODEs) to address the weaknesses identified in the diagnostic report below:
+{{diagnostic_report}}
+
+Raw output from optim() call:
+{{opt_smm}}
+
+Previous model:
+{{spec}}
+-----------
+
+ANALYSIS AND REFINEMENT TASK
+Based on your analysis of the diagnostic report, propose 3-5 new candidate models that could better describe the data.
+
+Focus on Structural Changes: Do NOT just tweak the param_values. Your changea should be logical, incremental improvements to the previous model.
+
+Adhere to the Schema: The output must be a single, valid JSON object that strictly follows the schema and rules provided below.
+
+{{schema}}
+
+DERIVATION HINTS (non-binding)
+-----------
+- Use variable_summaries, pairwise lags, and input schedules from the packet to choose a plausible structure and initial guesses.
+- Keep complexity low–moderate (1–4 states, 4–10 parameters). Favor identifiable forms.
+
+OUTPUT
+-----------
+Return ONLY the single, complete, and refined JSON object. Do not include explanations or prose.
